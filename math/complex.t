@@ -22,7 +22,28 @@ function sub(a, b)
     return `a - b
 end
 
+local C = terralib.includec("math.h")
+
+sqrt = C.sqrtf
+
 -- complex
+terra conjf(c: float[2])
+    var result: float[2]
+    result[0] = c[0]
+    result[1] = -c[1]
+    return result
+end
+
+terra mulconjf(c: float[2])
+    var v = @[&vector(float,2)]([&float](c))
+    v = v*v
+    return v[0] + v[1]
+end
+
+terra absf(c: float[2])
+    return sqrt(mulconjf(c))
+end
+
 terra cprodf(c1: float[2], c2: float[2])
     var result: float[2]
     result[0] = c1[0]*c2[0] - c1[1]*c2[1]
@@ -35,7 +56,7 @@ terra addf(c1: float[2], c2: float[2])
 end
 
 terra subf(c1: float[2], c2: float[2])
-    return map2(sub, c1, c2) 
+    [map2(sub, c1, c2)]
 end
 
 terra recipf(c: float[2])
@@ -43,6 +64,14 @@ terra recipf(c: float[2])
     var result: float[2]
     result[0] = c[0] / denom
     result[1] = -c[1] / denom
+    return result
+end
+
+terra divf(c1: float[2], c2: float[2])
+    var denom: float = c2[0]*c2[0] + c2[1]*c2[1]
+    var result: float[2]
+    result[0] = (c1[0]*c2[0] + c1[1]*c2[1]) / denom
+    result[1] = (c1[1]*c2[0] - c1[0]*c2[1]) / denom
     return result
 end
 
