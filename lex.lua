@@ -134,6 +134,18 @@ function printokens(tokens)
     end
 end
 
+function tokensEqual(t1, t2)
+    if t1.type ~= t2.type then return false end
+
+    if t1.type == "identifier" then
+        return t1.name == t2.name
+    elseif t1.type == "operator" then
+        return t1.token == t2.token
+    else
+        return t1.value == t2.value
+    end
+end
+
 n = parseNumber("123")
 assert(n.value == "123" and n.type == "int")
 
@@ -191,4 +203,29 @@ assert(n.value == "4." and n.type == "f")
 status, err = pcall(parseNumber, "123.45E")
 assert(status == false and err == "Malformed number")
 
-printokens(tokenize("4.f 5a"))
+toks = tokenize("4.f 5a abc 1_a1 _1 A_4_5 ab_1 +-+^*/++<===")
+ref_toks = {
+    makeLiteralToken("f", "4."),
+    makeLiteralToken("a", "5"),
+    makeIdentifier("abc"),
+    makeLiteralToken("_a1", "1"),
+    makeIdentifier("_1"),
+    makeIdentifier("A_4_5"),
+    makeIdentifier("ab_1"),
+    makeOperator("+"),
+    makeOperator("-"),
+    makeOperator("+"),
+    makeOperator("^"),
+    makeOperator("*"),
+    makeOperator("/"),
+    makeOperator("++"),
+    makeOperator("<="),
+    makeOperator("=="),
+}
+
+assert(#toks == #ref_toks)
+for i, t in ipairs(ref_toks) do
+    assert(tokensEqual(t, toks[i]), "Failed to compare toks at index "..i)
+end
+
+--printokens(tokenize("4.f 5a"))
