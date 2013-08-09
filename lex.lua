@@ -10,6 +10,10 @@ function makeOperator(typ)
     return { type = "operator", token = typ }
 end
 
+function makeTerminal(typ)
+    return { type = "terminal", token = typ }
+end
+
 -- "\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
 function parseNumber(str, pos)
     pos = pos or 1
@@ -84,34 +88,41 @@ function parseIdentifier(str, pos)
 end
 
 
-function match_op(ops, str)
-    for i, op in ipairs(ops) do
-        if str == op then return op end
+function match_tok(toks, str)
+    for i, tok in ipairs(toks) do
+        if str == tok then return tok end
     end
 end
 
 function tokenize(str)
     local tokens = {}
     local pos = 1
-    local ops = {"--", "++", "->", "==", "!=", "<=", ">="}
+    local ops = {"--", "++", "->", "==", "!=", "<=", ">=", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
+    local terminals = {"::", "(", ")", "[", "]", "{", "}", ".", ",", ":"}
     while pos <= str:len() do
         first = str:sub(pos, pos)
         if first:match("[0-9]") then
             tok, pos = parseNumber(str, pos)
         elseif first:match("[_a-zA-Z]") then
             tok, pos = parseIdentifier(str, pos)
-        elseif pos <= str:len()-1 and match_op(ops, str:sub(pos, pos+1)) then
-            op = match_op(ops, str:sub(pos, pos+1))
+        elseif pos <= str:len()-1 and match_tok(ops, str:sub(pos, pos+1)) then
+            op = str:sub(pos, pos+1)
             tok = makeOperator(op)
             pos = pos + 2
-        elseif first:match("[%+%-%*/%^<>=!]") then
+        elseif match_tok(ops, first) then
             tok = makeOperator(first)
+            pos = pos + 1
+        elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
+            tok = makeTerminal(str:sub(pos, pos+1))
+            pos = pos + 2
+        elseif match_tok(terminals, first) then
+            tok = makeTerminal(first)
             pos = pos + 1
         elseif first:match(" ") then
             pos = pos + 1
             tok = nil
         else
-            error("Undefined token")
+            error("Undefined token "..first)
         end
         if tok then
             table.insert(tokens, tok)
@@ -203,7 +214,7 @@ assert(n.value == "4." and n.type == "f")
 status, err = pcall(parseNumber, "123.45E")
 assert(status == false and err == "Malformed number")
 
-toks = tokenize("4.f 5a abc 1_a1 _1 A_4_5 ab_1 +-+^*/++<===")
+toks = tokenize("4.f 5a abc 1_a1 _1 A_4_5 ab_1 +-+^*/++<===(){:::}")
 ref_toks = {
     makeLiteralToken("f", "4."),
     makeLiteralToken("a", "5"),
@@ -221,6 +232,12 @@ ref_toks = {
     makeOperator("++"),
     makeOperator("<="),
     makeOperator("=="),
+    makeTerminal("("),
+    makeTerminal(")"),
+    makeTerminal("{"),
+    makeTerminal("::"),
+    makeTerminal(":"),
+    makeTerminal("}"),
 }
 
 assert(#toks == #ref_toks)
