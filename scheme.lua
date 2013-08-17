@@ -19,13 +19,13 @@ function makeTerminal(typ)
 end
 
 
--- "\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
+-- "-?\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
 function parseNumber(str, pos)
     pos = pos or 1
     local typ = "int"
     local result = ""
 
-    local s, e = str:find("%d+", pos)
+    local s, e = str:find("-?%d+", pos)
     result = result .. str:sub(s, e)
 
     pos = e+1
@@ -117,7 +117,9 @@ function tokenize(str)
 
     while pos <= str:len() do
         first = str:sub(pos, pos)
-        if first:match("[0-9]") then
+        if first:match("-") and (str:sub(pos+1,pos+1)):match("[0-9]") then
+            tok, pos = parseNumber(str, pos)
+        elseif first:match("[0-9]") then
             tok, pos = parseNumber(str, pos)
         elseif first:match(":") then
             tok, pos = parseAtom(str, pos)
@@ -190,14 +192,15 @@ startParser(tokens)
 
 function parseExpr()
     if _token.type == "(" then
-        advance()
+        advance("(")
         local funcall = { type = "list", args = {} }
         while _token.type ~= ")" do
             table.insert(funcall.args, parseExpr())
         end
+        advance(")")
         return funcall
     elseif _token.type == "'" then
-        advance()
+        advance("'")
         local quote = { type = "quote", expr = parseExpr() }
         return quote
     else
@@ -205,6 +208,35 @@ function parseExpr()
     end
 end
 
+function lookup(ident, env)
+    return env[ident]
+end
+
+function evalExpr(expr, env)
+    if expr.type == "list" then
+        if #expr.args == 0 then
+            return nil
+        else
+            local fun = expr.args[1]
+            if fun.type ~= "ident" then
+                error("Bad funcall: "..fun.type..", "..fun.value)
+            end
+
+            local func = lookup(fun.value, env)
+            local args = {}
+            for i = 2, #expr.args do
+                args[i-1] = evalExpr(expr.args[i], env)
+            end
+            return func(unpack(args))
+        end
+    elseif expr.type == "atom" then
+        return expr.value
+    elseif expr.type == "int" then
+        return expr.value
+    elseif expr.type == "float" then
+        return expr.value
+    end
+end
 
 -- Print anything - including nested tables
 function table_print (tt, indent, done)
@@ -231,5 +263,46 @@ function table_print (tt, indent, done)
   end
 end
 
+function addfn(a, b) 
+    return a + b
+end
+
+function subfn(a, b) 
+    return a - b
+end
+
+function mulfn(a, b) 
+    return a * b
+end
+
+function divfn(a, b) 
+    return a / b
+end
+
+function make_vararg(fn, min, default)
+    return function(...)
+        local len = select("#", ...)
+        if len < min then
+            error("Bad arity")
+        elseif min == 0 and len == 0 then
+            return default
+        end
+        local acc = select(1, ...)
+        for i = 2, len do
+            acc = fn(acc, select(i, ...))
+        end
+        return acc
+    end
+end
+
 result = parseExpr()
 table_print(result, 2)
+
+env = { 
+    ["+"] = make_vararg(addfn, 0, 0), 
+    ["-"] = make_vararg(subfn, 2), 
+    ["*"] = make_vararg(mulfn, 0, 1), 
+    ["/"] = make_vararg(divfn, 2) 
+}
+print()
+print(evalExpr(result, env))
