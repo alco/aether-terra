@@ -15,7 +15,7 @@ function makeIdentifier(name)
 end
 
 function makeTerminal(typ)
-    return { type = "terminal", value = typ }
+    return { type = typ, value = typ }
 end
 
 
@@ -146,5 +146,90 @@ function printokens(tokens)
     end
 end
 
+------------------------------------
+
+function startParser(tokens)
+    _tokenPos = 1
+    _token = nil
+    _tokens = tokens
+
+    nextToken()
+end
+
+function nextToken()
+    local tok = _token
+    _token = _tokens[_tokenPos]
+    _tokenPos = _tokenPos + 1
+    return tok
+end
+
+function peek()
+    return _tokens[_tokenPos]
+end
+
+function advance(typ)
+    if typ then expect(typ) end
+    local tok = _token
+    nextToken()
+    return tok
+end
+
+function expect(typ)
+    if _token.type ~= typ then
+        error("Unexpected token ".._token.type.."; expected "..typ)
+    end
+end
+
 input = io.read("*all")
-printokens(tokenize(input))
+tokens = tokenize(input)
+printokens(tokens)
+
+print("------------")
+
+startParser(tokens)
+
+function parseExpr()
+    if _token.type == "(" then
+        advance()
+        local funcall = { type = "list", args = {} }
+        while _token.type ~= ")" do
+            table.insert(funcall.args, parseExpr())
+        end
+        return funcall
+    elseif _token.type == "'" then
+        advance()
+        local quote = { type = "quote", expr = parseExpr() }
+        return quote
+    else
+        return nextToken()
+    end
+end
+
+
+-- Print anything - including nested tables
+function table_print (tt, indent, done)
+  done = done or {}
+  indent = indent or 0
+  if type(tt) == "table" then
+    for key, value in pairs (tt) do
+      io.write(string.rep (" ", indent)) -- indent it
+      if type (value) == "table" and not done [value] then
+        done [value] = true
+        io.write(string.format("[%s] => table\n", tostring (key)));
+        io.write(string.rep (" ", indent+4)) -- indent it
+        io.write("(\n");
+        table_print (value, indent + 7, done)
+        io.write(string.rep (" ", indent+4)) -- indent it
+        io.write(")\n");
+      else
+        io.write(string.format("[%s] => %s\n",
+            tostring (key), tostring(value)))
+      end
+    end
+  else
+    io.write(tt .. "\n")
+  end
+end
+
+result = parseExpr()
+table_print(result, 2)
