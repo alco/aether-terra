@@ -117,6 +117,9 @@ int repl_doexpr()
     assert(lua_gettop(L) == 0); // sanity check to prevent stack overflow
 
     const char *line = readline();
+    if (!line)
+        return -1;
+
     push_prompt();
 
     lua_getfield(L, LUA_GLOBALSINDEX, "doexpr");

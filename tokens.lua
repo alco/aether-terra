@@ -244,7 +244,8 @@ function doexpr(line)
     local cont = make_token_cont(line)
     for i = 1, 3 do
         tok = cont()
-        if tok then
+        if tok == nil then
+            return -1  -- signal EOF
             --printoken(tok)
         end
     end
