@@ -19,7 +19,7 @@ function makeOperator(typ)
 end
 
 function makeTerminal(typ)
-    return { type = typ, value = typ }
+    return { type = "term", value = typ }
 end
 
 function makeNewline()
@@ -127,7 +127,7 @@ function tokenize(str)
     local pos = 1
     local ops = {"--", "++", "->", "==", "!=", "<=", ">=", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
     local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ",", ":"}
-    local whitespace = {" ", ",", "\t", "\n"}
+    local whitespace = {" ", ",", "\t"}
     local tok
     local stat
     local first
@@ -151,8 +151,8 @@ function tokenize(str)
         elseif match_tok(ops, first) then
             tok = makeOperator(first)
             pos = pos + 1
-        --elseif first:match("\n") then
-            --tok, pos = parseNewline(str, pos)
+        elseif first:match("\n") then
+            tok, pos = parseNewline(str, pos)
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2
@@ -231,16 +231,24 @@ function get_token()
     end
 end
 
-local get_tok_co = coroutine.wrap(get_token)
+get_tok_co = coroutine.wrap(get_token)
+
+require("parser")
 
 function doexpr()
-    local tok
-    for i = 1, 3 do
-        tok = get_tok_co()
-        if tok == nil then
-            return -1  -- signal EOF
-        end
-        printoken(tok)
-    end
+    --if _token == nil then
+        --startParser()
+    --end
+
+    local result = expression()
+    --table_print(result)
+    --local tok
+    --for i = 1, 3 do
+    --    tok = get_tok_co()
+    --    if tok == nil then
+    --        return -1  -- signal EOF
+    --    end
+    --    printoken(tok)
+    --end
     return 3
 end
