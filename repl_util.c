@@ -12,18 +12,8 @@ static EditLine *el_state;
 static lua_State *lua_state;
 
 
-static void printstats(lua_State * L) {
-#if 0
-  //LINE COVERAGE INFORMATION
-  lua_getfield(L, LUA_GLOBALSINDEX,"terra");
-  lua_getfield(L, -1, "dumplineinfo");
-  lua_call(L,0,0);
-#endif
-}
-
 static void die(lua_State * L) {
     fprintf(stderr, "%s\n",luaL_checkstring(L,-1));
-    printstats(L);
     exit(1);
 }
 
@@ -67,9 +57,11 @@ static void init_terra()
     if (terra_init(L))
         die(L);
 
-    assert(0 == luaL_dostring(L, "require(\"tokens\")"));
+    // set up the line reading function
     lua_pushcfunction(L, readline_lua);
     lua_setfield(L, LUA_GLOBALSINDEX, "aether_readline");
+
+    assert(0 == luaL_dofile(L, "tokens.lua"));
 
     lua_state = L;
 }
@@ -88,7 +80,6 @@ static void teardown()
 
     el_end(el_state);
 
-    printstats(lua_state);
     lua_close(lua_state);
     terra_llvmshutdown();
 }
@@ -118,7 +109,7 @@ int repl_doexpr()
 {
     lua_State *L = lua_state;
 
-    assert(lua_gettop(L) == 0); // sanity check to prevent stack overflow
+    assert(lua_gettop(L) == 0); // sanity check
 
     pop_prompt();
 
@@ -129,9 +120,7 @@ int repl_doexpr()
     assert(lua_isnumber(L, 1));
 
     int result = lua_tonumber(L, 1);
-
     lua_pop(L, 1);
-    assert(lua_gettop(L) == 0);
 
     return result;
 }
