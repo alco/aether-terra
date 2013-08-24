@@ -2,14 +2,18 @@
 
 #include "repl.h"
 
+
 int doloop()
 {
     while (1) {
-        const char *line = readline();
-        if (!line)
+        /*printf("Calling repl_doexpr()\n");*/
+        int result = repl_doexpr();
+        if (result == -1)
             break;
-        if (*line != '\n')
-            printf("%s", line);
+
+        if (result > 0)
+            printf("result = %d\n", result);
+
     }
     return 0;
 }

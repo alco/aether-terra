@@ -23,7 +23,7 @@ function makeTerminal(typ)
 end
 
 function makeNewline()
-    return { type = "\n", value = nil }
+    return { type = "nl", value = "" }
 end
 
 -- "-?\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
@@ -88,7 +88,7 @@ ident_pat = "[^%s'`,()]+"
 
 function parseIdentifier(str, pos)
     pos = pos or 1
-    s, e = str:find(ident_pat, pos)
+    local s, e = str:find(ident_pat, pos)
     if s == nil then
         error("Bad identifier", 0)
     else
@@ -100,7 +100,7 @@ end
 
 function parseAtom(str, pos)
     pos = pos or 1
-    s, e = str:find(":"..ident_pat, pos)
+    local s, e = str:find(":"..ident_pat, pos)
     if s == nil then
         error("Bad atom", 0)
     else
@@ -112,7 +112,7 @@ end
 
 function parseNewline(str, pos)
     pos = pos or 1
-    s, e = str:find("\n+", pos)
+    local s, e = str:find("\n+", pos)
     if s == nil then
         error("Expected newline", 0)
     else
@@ -127,8 +127,10 @@ function tokenize(str)
     local pos = 1
     local ops = {"--", "++", "->", "==", "!=", "<=", ">=", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
     local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ",", ":"}
-    local whitespace = {" ", ",", "\t"}
+    local whitespace = {" ", ",", "\t", "\n"}
     local tok
+    local stat
+    local first
 
     local function match_tok(toks, str)
         for i, tok in ipairs(toks) do
@@ -149,8 +151,8 @@ function tokenize(str)
         elseif match_tok(ops, first) then
             tok = makeOperator(first)
             pos = pos + 1
-        elseif first:match("\n") then
-            tok, pos = parseNewline(str, pos)
+        --elseif first:match("\n") then
+            --tok, pos = parseNewline(str, pos)
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2
@@ -173,8 +175,78 @@ function tokenize(str)
     return tokens
 end
 
+function table_print (tt, indent, done)
+  done = done or {}
+  indent = indent or 0
+  if type(tt) == "table" then
+    for key, value in pairs (tt) do
+      io.write(string.rep (" ", indent)) -- indent it
+      if type (value) == "table" and not done [value] then
+        done [value] = true
+        io.write(string.format("[%s] => table\n", tostring (key)));
+        io.write(string.rep (" ", indent+4)) -- indent it
+        io.write("(\n");
+        table_print (value, indent + 7, done)
+        io.write(string.rep (" ", indent+4)) -- indent it
+        io.write(")\n");
+      else
+        io.write(string.format("[%s] => %s\n",
+            tostring (key), tostring(value)))
+      end
+    end
+  else
+    io.write(tt .. "\n")
+  end
+end
+
+function printoken(tok)
+    local str = tok.type
+    if tok.value then
+        str = str.." : "..tok.value
+    end
+    --table_print(tok)
+    print(str)
+end
+
 function printokens(tokens)
     for i,t in ipairs(tokens) do
-        print(t.type .. " : " .. t.value)
+        printoken(t)
     end
+end
+
+-- this is a coroutine continuosly yielding a stream of tokens
+function get_token(line)
+    coroutine.yield(true)
+
+    while true do
+        local toks = tokenize(line)
+        --table_print(toks)
+        for i,t in ipairs(toks) do
+            coroutine.yield(t)
+        end
+
+        line = aether_readline()
+        if line == nil then
+            -- EOF
+            return
+        end
+    end
+end
+
+function make_token_cont(line)
+    local co = coroutine.wrap(get_token)
+    assert(co(line))
+    return co
+end
+
+function doexpr(line)
+    local tok
+    local cont = make_token_cont(line)
+    for i = 1, 3 do
+        tok = cont()
+        if tok then
+            --printoken(tok)
+        end
+    end
+    return 3
 end

@@ -4,6 +4,6 @@
 void repl_init();
 void print_welcome();
 
-const char *readline();
+int repl_doexpr();
 
 #endif // AETHER_REPL_H
