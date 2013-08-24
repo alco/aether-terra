@@ -114,12 +114,11 @@ function tokenize(str)
     local pos = 1
     local terminals = {"'", "`", "(", ")"}
     local whitespace = {" ", ",", "\t", "\n"}
+    local tok
 
     while pos <= str:len() do
         first = str:sub(pos, pos)
-        if first:match("-") and (str:sub(pos+1,pos+1)):match("[0-9]") then
-            tok, pos = parseNumber(str, pos)
-        elseif first:match("[0-9]") then
+        if first:match("[0-9]") or (str:sub(pos,pos+2)):match("-[0-9]") then
             tok, pos = parseNumber(str, pos)
         elseif first:match(":") then
             tok, pos = parseAtom(str, pos)
@@ -184,9 +183,6 @@ end
 
 input = io.read("*all")
 tokens = tokenize(input)
-printokens(tokens)
-
-print("------------")
 
 startParser(tokens)
 
@@ -204,31 +200,69 @@ function parseExpr()
         local quote = { type = "quote", expr = parseExpr() }
         return quote
     else
-        return nextToken()
+        local tok = nextToken()
+        if tok == nil then
+            print("The end")
+        else
+            return tok
+        end
     end
 end
 
 function lookup(ident, env)
-    return env[ident]
+    local val = env.names[ident]
+    if val == nil then
+        if env.parent then
+            return lookup(ident, env.parent)
+        else
+            error("Undefined identifier "..ident)
+        end
+    end
+    return val
 end
 
-function evalExpr(expr, env)
+function evalExpr(expr, env, lkp, shouldCallFns)
+    local lookup = lkp or lookup
+    local callFns
+    if shouldCallFns == nil then
+        callFns = true
+    else
+        callFns = shouldCallFns
+    end
     if expr.type == "list" then
         if #expr.args == 0 then
             return nil
         else
             local fun = expr.args[1]
             if fun.type ~= "ident" then
-                error("Bad funcall: "..fun.type..", "..fun.value)
+                fun = evalExpr(fun, env, lkp, shouldCallFns)
+                if callFns and type(fun) ~= "function" then
+                    error("Bad funcall: "..expr.args[1].type)
+                end
             end
 
             local func = lookup(fun.value, env)
             local args = {}
-            for i = 2, #expr.args do
-                args[i-1] = evalExpr(expr.args[i], env)
+
+            -- Handle special forms first
+            if fun.value == "def" then
+                if #expr.args ~= 3 then
+                    error("Bad arity for def")
+                end
+                return func(expr.args[2], expr.args[3])
+            elseif fun.value == "fn" then
+                return func(expr.args[2], expr.args[3])
+            else
+                for i = 2, #expr.args do
+                    args[i-1] = evalExpr(expr.args[i], env)
+                end
+                return func(unpack(args))
             end
-            return func(unpack(args))
         end
+    elseif expr.type == "quote" then
+        return expr.expr
+    elseif expr.type == "ident" then
+        return lookup(expr.value, env)
     elseif expr.type == "atom" then
         return expr.value
     elseif expr.type == "int" then
@@ -263,46 +297,101 @@ function table_print (tt, indent, done)
   end
 end
 
-function addfn(a, b) 
-    return a + b
-end
-
-function subfn(a, b) 
-    return a - b
-end
-
-function mulfn(a, b) 
-    return a * b
-end
-
-function divfn(a, b) 
-    return a / b
-end
-
-function make_vararg(fn, min, default)
-    return function(...)
-        local len = select("#", ...)
-        if len < min then
-            error("Bad arity")
-        elseif min == 0 and len == 0 then
-            return default
-        end
-        local acc = select(1, ...)
-        for i = 2, len do
-            acc = fn(acc, select(i, ...))
-        end
-        return acc
+function add(...) 
+    local len = select("#", ...)
+    if len == 0 then
+        return 0
     end
+    local acc = select(1, ...)
+    for i = 2, len do
+        acc = acc + select(i, ...)
+    end
+    return acc
 end
 
-result = parseExpr()
-table_print(result, 2)
+function sub(...) 
+    local len = select("#", ...)
+    if len < 1 then
+        error("Bad arity for -")
+    end
+    local acc = -select(1, ...)
+    for i = 2, len do
+        acc = acc - select(i, ...)
+    end
+    return acc
+end
+
+function mul(...) 
+    local len = select("#", ...)
+    if len == 0 then
+        return 1
+    end
+    local acc = select(1, ...)
+    for i = 2, len do
+        acc = acc * select(i, ...)
+    end
+    return acc
+end
+
+function div(...) 
+    local len = select("#", ...)
+    if len < 1 then
+        error("Bad arity for /")
+    elseif len == 1 then
+        return 1 / select(1, ...)
+    end
+    local acc = select(1, ...)
+    for i = 2, len do
+        acc = acc / select(i, ...)
+    end
+    return acc
+end
 
 env = { 
-    ["+"] = make_vararg(addfn, 0, 0), 
-    ["-"] = make_vararg(subfn, 2), 
-    ["*"] = make_vararg(mulfn, 0, 1), 
-    ["/"] = make_vararg(divfn, 2) 
+    parent = nil,
+    names = {
+        ["+"] = add, 
+        ["-"] = sub,
+        ["*"] = mul, 
+        ["/"] = div,
+    }
 }
-print()
-print(evalExpr(result, env))
+
+function def(ident, expr)
+    local val = evalExpr(expr, env)
+    env.names[ident.value] = val
+    return nil
+end
+env.names.def = def
+
+function fn(args, expr)
+    local names = {}
+    for i = 1, #args do
+        names[args[i].value] = true
+    end
+
+    local function modified_lookup(ident, env)
+        if names[ident.value] then
+            return ident
+        else
+            stat, val = pcall(lookup(ident, env))
+            if stat then
+                return ident
+            else
+                error(val)
+            end
+        end
+    end
+
+    expr = evalExpr(expr, fn_env, modified_lookup)
+end
+env.names.fn = fn
+
+printokens(tokens)
+print("------------")
+
+while _token do
+    result = parseExpr()
+    --table_print(result, 2)
+    print(evalExpr(result, env))
+end

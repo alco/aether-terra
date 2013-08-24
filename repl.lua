@@ -42,3 +42,8 @@ function env:getval(name)
 end
 
 --return env
+
+terra test()
+    var a: int = 13
+    return a
+end
