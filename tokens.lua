@@ -215,39 +215,32 @@ function printokens(tokens)
 end
 
 -- this is a coroutine continuosly yielding a stream of tokens
-function get_token(line)
-    coroutine.yield(true)
-
+function get_token()
     while true do
+        local line = aether_readline()
+        if line == nil then
+            -- EOF
+            return
+        end
+        
         local toks = tokenize(line)
         --table_print(toks)
         for i,t in ipairs(toks) do
             coroutine.yield(t)
         end
-
-        line = aether_readline()
-        if line == nil then
-            -- EOF
-            return
-        end
     end
 end
 
-function make_token_cont(line)
-    local co = coroutine.wrap(get_token)
-    assert(co(line))
-    return co
-end
+local get_tok_co = coroutine.wrap(get_token)
 
-function doexpr(line)
+function doexpr()
     local tok
-    local cont = make_token_cont(line)
     for i = 1, 3 do
-        tok = cont()
+        tok = get_tok_co()
         if tok == nil then
             return -1  -- signal EOF
-            --printoken(tok)
         end
+        printoken(tok)
     end
     return 3
 end
