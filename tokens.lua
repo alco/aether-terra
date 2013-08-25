@@ -127,7 +127,7 @@ function tokenize(str)
     local pos = 1
     local ops = {"--", "++", "->", "==", "!=", "<=", ">=", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
     local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ",", ":"}
-    local whitespace = {" ", ",", "\t"}
+    local whitespace = {" ", ",", "\t", "\n"}
     local tok
     local stat
     local first
@@ -151,8 +151,8 @@ function tokenize(str)
         elseif match_tok(ops, first) then
             tok = makeOperator(first)
             pos = pos + 1
-        elseif first:match("\n") then
-            tok, pos = parseNewline(str, pos)
+        --elseif first:match("\n") then
+            --tok, pos = parseNewline(str, pos)
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2
@@ -216,7 +216,12 @@ end
 
 -- this is a coroutine continuosly yielding a stream of tokens
 function get_token()
+    local opt = nil
     while true do
+        while opt and opt.async do
+            opt = coroutine.yield(nil)
+        end
+
         local line = aether_readline()
         if line == nil then
             -- EOF
@@ -226,7 +231,7 @@ function get_token()
         local toks = tokenize(line)
         --table_print(toks)
         for i,t in ipairs(toks) do
-            coroutine.yield(t)
+            opt = coroutine.yield(t)
         end
     end
 end
@@ -241,7 +246,8 @@ function doexpr()
     --end
 
     local result = expression()
-    --table_print(result)
+    print("Result node:")
+    table_print(result)
     --local tok
     --for i = 1, 3 do
     --    tok = get_tok_co()

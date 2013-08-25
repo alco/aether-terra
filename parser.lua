@@ -6,6 +6,7 @@ _next_token = nil
     --nextToken()
 --end
 
+-- synchrounous token get
 function nextToken()
     local tok
     if _next_token ~= nil then
@@ -17,9 +18,13 @@ function nextToken()
     return tok
 end
 
+-- asynchrounous token get
 function peekToken()
     if _next_token == nil then
-        _next_token = map_token(get_tok_co())
+        local t = get_tok_co({ async = true })
+        if t then
+            _next_token = map_token(t)
+        end
     end
     return _next_token
 end
@@ -105,16 +110,16 @@ function expression(rbp)
     rbp = rbp or 0
 
     local t = nextToken()
-    print("Calling nud on")
-    table_print(t)
-    print("---")
+    --print("Calling nud on")
+    --table_print(t)
+    --print("---")
     local left = t:nud()
-    while rbp < peekToken().lbp do
+    while peekToken() and rbp < peekToken().lbp do
         --print("beginloop")
         t = nextToken()
-        print("Calling led on")
-        table_print(t)
-        print("---")
+        --print("Calling led on")
+        --table_print(t)
+        --print("---")
         left = t:led(left)
         --print("endloop")
     end
