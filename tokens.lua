@@ -215,46 +215,57 @@ function printokens(tokens)
 end
 
 -- this is a coroutine continuosly yielding a stream of tokens
-function get_token()
-    local opt = nil
-    while true do
-        while opt and opt.async do
-            opt = coroutine.yield(nil)
-        end
+function get_token_fn(line)
+    return function(opt)
+        while true do
+            --print("tokenizing line")
+            local toks = tokenize(line)
+            --print("did end tokenizing line")
+            for i,t in ipairs(toks) do
+                opt = coroutine.yield(t)
+            end
+            --print("no toks")
+            --table_print(opt)
 
-        local line = aether_readline()
-        if line == nil then
-            -- EOF
-            return
-        end
-        
-        local toks = tokenize(line)
-        --table_print(toks)
-        for i,t in ipairs(toks) do
-            opt = coroutine.yield(t)
+            while opt and opt.async do
+                opt = coroutine.yield(nil)
+            end
+            
+            line = aether_readline()
+            if line == nil then
+                -- EOF
+                return
+            end
         end
     end
 end
 
-get_tok_co = coroutine.wrap(get_token)
+get_tok_co = nil
+
+function make_tok_co(line)
+    return coroutine.wrap(get_token_fn(line))
+end
 
 require("parser")
 
-function doexpr()
-    --if _token == nil then
-        --startParser()
-    --end
+function doexpr(line)
+    -- Create a token stream just for this invocation of doexpr()
+    get_tok_co = make_tok_co(line)
 
-    local result = expression()
-    print("Result node:")
-    table_print(result)
-    --local tok
-    --for i = 1, 3 do
-    --    tok = get_tok_co()
-    --    if tok == nil then
-    --        return -1  -- signal EOF
-    --    end
-    --    printoken(tok)
-    --end
+    --print("Started with line '"..line.."'")
+
+    if peekToken() ~= nil then
+        --print("Peek token")
+        --table_print(peekToken())
+        local result = expression()
+        print("Result node:")
+        table_print(result)
+    else
+        print("no tokens")
+    end
+
+    -- Make sure there are no left-over tokens
+    expect(nil)
+
     return 3
 end

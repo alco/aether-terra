@@ -13,7 +13,12 @@ function nextToken()
         tok = _next_token
         _next_token = nil
     else
-        tok = map_token(get_tok_co())
+        local t = get_tok_co()
+        if t == nil then
+            tok = {}
+        else
+            tok = map_token(t)
+        end
     end
     return tok
 end
@@ -35,9 +40,24 @@ end
 --end
 
 function expect(typ)
-    if _token.type ~= typ then
-        error("Unexpected token ".._token.type.."; expected "..typ)
+    if typ == nil then
+        if peekToken() ~= nil then
+            error("Expected end of line. Got "..peekToken().type)
+        end
+        return
     end
+
+    local tok = peekToken()
+    if tok == nil then
+        error("Expected end of line")
+    elseif tok.type ~= typ then
+        error("Unexpected token "..tok.type.."; expected "..typ)
+    end
+end
+
+function skip(typ)
+    expect(typ)
+    _next_token = nil
 end
 
 --------------------------

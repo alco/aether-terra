@@ -19,20 +19,6 @@ static void die(lua_State * L) {
 
 ///
 
-static int pending_prompt;
-
-static void push_prompt()
-{
-    pending_prompt = 1;
-}
-
-static void pop_prompt()
-{
-    pending_prompt = 0;
-}
-
-///
-
 static const char *readline()
 {
     int count;
@@ -44,7 +30,6 @@ static int readline_lua(lua_State *L)
     assert(lua_gettop(L) == 0); // no arguments
 
     const char *line = readline();
-    push_prompt();
     lua_pushstring(L, line);
     return 1;
 }
@@ -68,6 +53,17 @@ static void init_terra()
 
 ///////////////////////////////////////
 
+static int pending_prompt;
+
+static void push_prompt()
+{
+    pending_prompt = 1;
+}
+
+static void pop_prompt()
+{
+    pending_prompt = 0;
+}
 
 static char *prompt(EditLine *el)
 {
@@ -111,10 +107,17 @@ int repl_doexpr()
 
     assert(lua_gettop(L) == 0); // sanity check
 
-    pop_prompt();
+    const char *line = readline();
+    if (!line)
+        return -1;
+
+    push_prompt();
 
     lua_getfield(L, LUA_GLOBALSINDEX, "doexpr");
-    lua_call(L, 0, 1);
+    lua_pushstring(L, line);
+    lua_call(L, 1, 1);
+
+    pop_prompt();
 
     assert(lua_gettop(L) == 1);
     assert(lua_isnumber(L, 1));
