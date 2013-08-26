@@ -11,8 +11,8 @@ int doloop()
         if (result == -1)
             break;
 
-        if (result > 0)
-            printf("result = %d\n", result);
+        /*if (result > 0)*/
+            /*printf("result = %d\n", result);*/
 
     }
     return 0;

@@ -26,13 +26,13 @@ function makeNewline()
     return { type = "nl", value = "" }
 end
 
--- "-?\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
+-- "\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
 function parseNumber(str, pos)
     pos = pos or 1
     local typ = "int"
     local result = ""
 
-    local s, e = str:find("-?%d+", pos)
+    local s, e = str:find("%d+", pos)
     result = result .. str:sub(s, e)
 
     pos = e+1
@@ -125,12 +125,13 @@ end
 function tokenize(str)
     local tokens = {}
     local pos = 1
-    local ops = {"--", "++", "->", "==", "!=", "<=", ">=", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
+    local ops = {"--", "++", "->", "==", "≠", "≤", "≥", "↑", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
     local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ",", ":"}
     local whitespace = {" ", ",", "\t", "\n"}
     local tok
     local stat
     local first
+    local op
 
     local function match_tok(toks, str)
         for i, tok in ipairs(toks) do
@@ -140,10 +141,14 @@ function tokenize(str)
 
     while pos <= str:len() do
         first = str:sub(pos, pos)
-        if first:match("[0-9]") or (str:sub(pos,pos+1)):match("-[0-9]") then
+        if first:match("[0-9]") then
             tok, pos = parseNumber(str, pos)
         -- elseif first:match(":") then
         --     tok, pos = parseAtom(str, pos)
+        elseif pos <= str:len()-2 and match_tok(ops, str:sub(pos, pos+2)) then
+            op = str:sub(pos, pos+2)
+            tok = makeOperator(op)
+            pos = pos + 3
         elseif pos <= str:len()-1 and match_tok(ops, str:sub(pos, pos+1)) then
             op = str:sub(pos, pos+1)
             tok = makeOperator(op)
@@ -258,8 +263,9 @@ function doexpr(line)
         --print("Peek token")
         --table_print(peekToken())
         local result = expression()
-        print("Result node:")
-        table_print(result)
+        --print("Result node:")
+        --table_print(result)
+        print(pretty_print(result))
     else
         print("no tokens")
     end
