@@ -47,9 +47,9 @@ function expect(typ)
         return
     end
 
-    local tok = peekToken()
+    local tok = nextToken() --peekToken()
     if tok == nil then
-        error("Expected end of line") -- FIXME  (1 + 2 + \n 3
+        error("Expected "..typ) --end of line") -- FIXME  (1 + 2 + \n 3
     elseif tok.id ~= typ then
         table_print(tok)
         error("Unexpected token "..tok.id.."; expected "..typ)
@@ -64,19 +64,19 @@ end
 --------------------------
 
 local symbol_table = {
-    int = { lbp = 0, nud = function(self)
+    int = { id = "int", lbp = 0, nud = function(self)
         return self
     end },
 
-    float = { lbp = 0, nud = function(self)
+    float = { id = "float", lbp = 0, nud = function(self)
         return self
     end },
 
-    ident = { lbp = 0, nud = function(self)
+    ident = { id = "ident", lbp = 0, nud = function(self)
         return self
     end },
 
-    nl = { lbp = 0 }
+    nl = { id = "newline", lbp = 0 }
 }
 
 local function symbol(id, precedence)
@@ -221,6 +221,7 @@ infix(">",  9)
 infix("≥",  9)
 
 -- TODO: tuples
+-- ⟨ ⟩
 symbol(")", 0)
 symbol("(", 100).nud = function(self)
     -- self is discarded
