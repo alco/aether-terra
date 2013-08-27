@@ -7,6 +7,7 @@ _next_parse_node = nil
 --end
 
 function resetParser()
+    --print("reset parser")
     _next_parse_node = nil
 end
 
@@ -134,6 +135,9 @@ function pretty_print(sym)
     elseif sym.first then
         -- unary op
         return "("..sym.id.." "..pretty_print(sym.first)..")"
+    elseif sym.second then
+        -- slice
+        return "("..sym.id.." _ "..pretty_print(sym.second)..")"
     elseif sym.exprs then
         local str = "("..sym.id
         for _, e in ipairs(sym.exprs) do
@@ -143,7 +147,7 @@ function pretty_print(sym)
     elseif sym.args then
         local str = "("..sym.id
         if sym.name then
-            str = str .. pretty_print(sym.name)
+            str = str .. " " .. pretty_print(sym.name)
         end
         for _, x in ipairs(sym.args) do
             str = str .. " " .. pretty_print(x)
@@ -281,6 +285,51 @@ function parse_keyval_expr()
     return { node, expr }
 end
 
+function parse_slice_expr()
+    local node = nextParseNode()
+    if node.id == "]" then
+        return nil
+    end
+
+    if node.id == ":" then
+        local fst = parse_slice_right()
+        if fst then
+            node.second = fst
+        else
+            node.value = ":"
+        end
+        return node
+    end
+
+    putBackNode(node)
+    local left = expression()
+
+    node = nextParseNode()
+    if node.id == ":" then
+        node.first = left
+        local snd = parse_slice_right()
+        if snd then
+            node.second = snd
+        end
+        return node
+    else
+        putBackNode(node)
+        skip("]")
+        return left
+    end
+end
+
+function parse_slice_right()
+    local next_node = nextParseNode()
+    if next_node.id == "]" then
+        return nil
+    end
+    putBackNode(next_node)
+    local expr = expression()
+    skip("]")
+    return expr
+end
+
 function advance(typ)
     --if 
     --local expr = 
@@ -290,6 +339,18 @@ end
 
 
 ------------------------------
+
+-- TODO: think about whitespace issues
+-- funcall(123+3 -1 [1 2 3] a [5])
+-- funcall((123 + 3) -1 [1 2 3] a [5])
+-- funcall(❨123 + 3❩ -1 [1 2 3] a [5])
+-- funcall(123 + 3, -1, [1 2 3], a, [5])
+-- funcall(a: 123 + 3 b: -1 c: [1 2 3] d: a e: [5])
+--
+-- [:a 1 :b 2 :c 3]
+-- [a: 1, b: 2, c: 3]
+-- 
+-- [a [b c] d[4]]
 
 infix("+", 10)
 infix("-", 10)
@@ -303,6 +364,8 @@ infix_r("**", 30)  -- exponentiation
 -- Unary ops
 --prefix("+", 40)
 prefix("-", 40)
+
+--infix(":", 41)
 
 -- Comparisons
 infix("==", 9)
@@ -348,8 +411,10 @@ end
 symbol("[").led = function(self, left)
     self.id = "subscript"
     self.first = left
-    self.second = expression()
-    skip("]")
+    local slice = parse_slice_expr()
+    if slice then
+        self.second = slice
+    end
     return self
 end
 
