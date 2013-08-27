@@ -137,14 +137,21 @@ int repl_doexpr()
 
     lua_getfield(L, LUA_GLOBALSINDEX, "doexpr");
     lua_pushstring(L, line);
-    lua_call(L, 1, 1);
+    int status = lua_pcall(L, 1, 1, 0);
+    assert(lua_gettop(L) == 1);
 
     pop_prompt();
 
-    assert(lua_gettop(L) == 1);
-    assert(lua_isnumber(L, 1));
-
-    int result = lua_tonumber(L, 1);
+    int result;
+    if (status == 0) {
+        assert(lua_isnumber(L, 1));
+        result = lua_tonumber(L, 1);
+    } else {
+        assert(lua_isstring(L, 1));
+        const char *errmsg = lua_tostring(L, 1);
+        printf("Error: %s\n", errmsg);
+        result = 0;
+    }
     lua_pop(L, 1);
 
     return result;

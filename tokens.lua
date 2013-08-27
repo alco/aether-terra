@@ -337,6 +337,8 @@ function doexpr(line)
     -- Create a token stream just for this invocation of doexpr()
     get_tok_co = make_tok_co(line)
 
+    resetParser()
+
     --print("Started with line '"..line.."'")
 
     -- FIXME: evaluate the whole expr before printing result

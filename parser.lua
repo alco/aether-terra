@@ -6,6 +6,10 @@ _next_parse_node = nil
     --nextToken()
 --end
 
+function resetParser()
+    _next_parse_node = nil
+end
+
 -- synchrounous token get
 function nextParseNode()
     local node
