@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <histedit.h>
 
@@ -9,6 +10,8 @@
 ///////////////////////////////////////
 
 static EditLine *el_state;
+static History  *el_hist;
+
 static lua_State *lua_state;
 
 
@@ -70,16 +73,26 @@ static char *prompt(EditLine *el)
     return (pending_prompt ? "… " : "» ");
 }
 
+static void push_history(const char *line)
+{
+    if (strlen(line)) {
+        HistEvent ev;
+        history(el_hist, &ev, H_ENTER, line);
+    }
+}
+
 static void teardown()
 {
     printf("\nCome back soon!\n");
 
+    history_end(el_hist);
     el_end(el_state);
 
     lua_close(lua_state);
     terra_llvmshutdown();
 }
 
+// http://www.cs.utah.edu/~bigler/code/libedit.html
 void repl_init()
 {
     init_terra();
@@ -92,6 +105,14 @@ void repl_init()
 
     el_set(el_state, EL_PROMPT, prompt);
     el_set(el_state, EL_EDITOR, "emacs");
+
+    el_hist = history_init();
+
+    HistEvent ev;
+    history(el_hist, &ev, H_SETSIZE, 100);
+
+    /* This sets up the call back functions for history functionality */
+    el_set(el_state, EL_HIST, history, el_hist);
 
     atexit(teardown);
 }
@@ -111,6 +132,7 @@ int repl_doexpr()
     if (!line)
         return -1;
 
+    push_history(line);
     push_prompt();
 
     lua_getfield(L, LUA_GLOBALSINDEX, "doexpr");
