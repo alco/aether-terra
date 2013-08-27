@@ -140,6 +140,8 @@ function pretty_print(sym)
         return str .. ")"
     else
         -- identifier or literal
+        --print("bad symbol")
+        --table_print(sym)
         return sym.value
     end
 end
@@ -328,7 +330,15 @@ symbol(":")
 symbol("{").nud = function(self)
     self.id = "map"
     self.items = parse_keyval_list_until("}")
-    return self;
+    return self
+end
+
+-- Constructor
+symbol("{").led = function(self, left)
+    self.id = "constructor"
+    self.first = left
+    self.second = { id = "array", exprs = parse_expr_list_until("}") }
+    return self
 end
 
 -- Keywords
