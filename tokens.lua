@@ -259,7 +259,7 @@ function doexpr(line)
 
     --print("Started with line '"..line.."'")
 
-    if peekToken() ~= nil then
+    if peekParseNode() ~= nil then
         --print("Peek token")
         --table_print(peekToken())
         local result = expression()

@@ -1,5 +1,5 @@
 --_token = nil
-_next_token = nil
+_next_parse_node = nil
 
 --function startParser(tokens)
     --_token = nil
@@ -7,58 +7,57 @@ _next_token = nil
 --end
 
 -- synchrounous token get
-function nextToken()
-    local tok
-    if _next_token ~= nil then
-        tok = _next_token
-        _next_token = nil
+function nextParseNode()
+    local node
+    if _next_parse_node ~= nil then
+        node = _next_parse_node
+        _next_parse_node = nil
     else
-        local t = get_tok_co()
-        if t == nil then
-            tok = {}
+        local tok = get_tok_co()
+        if tok == nil then
+            node = {}
         else
-            tok = map_token(t)
+            node = token_to_parse_node(tok)
         end
     end
-    return tok
+    return node
+end
+
+function putBackNode(node)
+    _next_parse_node = node
 end
 
 -- asynchrounous token get
-function peekToken()
-    if _next_token == nil then
-        local t = get_tok_co({ async = true })
-        if t then
-            _next_token = map_token(t)
+function peekParseNode()
+    if _next_parse_node == nil then
+        local tok = get_tok_co({ async = true })
+        if tok then
+            _next_parse_node = token_to_parse_node(tok)
         end
     end
-    return _next_token
+    return _next_parse_node
 end
-
---function advance(typ)
-    --if typ then expect(typ) end
-    --return nextToken()
---end
 
 function expect(typ)
     if typ == nil then
-        if peekToken() ~= nil then
-            error("Expected end of line. Got "..peekToken().id)
+        if peekParseNode() ~= nil then
+            error("Expected end of line. Got "..peekParseNode().id)
         end
         return
     end
 
-    local tok = nextToken() --peekToken()
-    if tok == nil then
+    local node = nextParseNode() --peekToken()
+    if node == nil then
         error("Expected "..typ) --end of line") -- FIXME  (1 + 2 + \n 3
-    elseif tok.id ~= typ then
-        table_print(tok)
-        error("Unexpected token "..tok.id.."; expected "..typ)
+    elseif node.id ~= typ then
+        table_print(node)
+        error("Unexpected token "..node.id.."; expected "..typ)
     end
 end
 
 function skip(typ)
     expect(typ)
-    _next_token = nil
+    _next_parse_node = nil
 end
 
 --------------------------
@@ -127,6 +126,12 @@ function pretty_print(sym)
     elseif sym.first then
         -- unary op
         return "("..sym.id.." "..pretty_print(sym.first)..")"
+    elseif sym.exprs then
+        local str = "("..sym.id
+        for _, e in ipairs(sym.exprs) do
+            str = str .. " " .. pretty_print(e)
+        end
+        return str .. ")"
     else
         -- identifier or literal
         return sym.value
@@ -145,7 +150,7 @@ function make_symbol(typ)
     return sym
 end
 
-function map_token(tok)
+function token_to_parse_node(tok)
     --print("mapping token")
     --table_print(tok)
     local sym
@@ -180,22 +185,52 @@ end
 function expression(rbp)
     rbp = rbp or 0
 
-    local t = nextToken()
+    local node = nextParseNode()
     --print("Calling nud on")
-    --table_print(t)
+    --table_print(node)
     --print("---")
-    local left = t:nud()
-    while peekToken() and rbp < peekToken().lbp do
+    local left = node:nud()
+    while peekParseNode() and rbp < peekParseNode().lbp do
         --print("beginloop")
-        t = nextToken()
+        node = nextParseNode()
         --print("Calling led on")
         --table_print(t)
         --print("---")
-        left = t:led(left)
+        left = node:led(left)
         --print("endloop")
     end
     return left
 end
+
+function parse_expr_list_until(term)
+    local exprs = {}
+    while true do
+        if peekParseNode() and peekParseNode().id == term then
+            skip(term)
+            return exprs
+        else
+            local node = nextParseNode()
+            if node.id == term then
+                return exprs
+            else
+                putBackNode(node)
+            end
+        end
+        --print("adding something to exprs")
+        local expr = expression()
+        --print(expr.id)
+        table.insert(exprs, expr)
+    end
+    return exprs
+end
+
+function advance(typ)
+    --if 
+    --local expr = 
+    --if typ then expect(typ) end
+    --return nextToken()
+end
+
 
 ------------------------------
 
@@ -222,10 +257,24 @@ infix("≥",  9)
 
 -- TODO: tuples
 -- ⟨ ⟩
-symbol(")", 0)
+symbol(")")
 symbol("(", 100).nud = function(self)
     -- self is discarded
     local expr = expression()
     skip(")")
     return expr
+end
+
+-- Array literal
+symbol("]")
+symbol("[", 101).id = "array"
+symbol("[").nud = function(self)
+    self.exprs = parse_expr_list_until("]")
+    return self
+end
+
+-- Keywords
+symbol("var").nud = function(self)
+    self.ident = advance("ident")
+    return self
 end
