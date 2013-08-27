@@ -267,9 +267,17 @@ end
 
 -- Array literal
 symbol("]")
-symbol("[", 101).id = "array"
+symbol("[", 101)
 symbol("[").nud = function(self)
+    self.id = "array"
     self.exprs = parse_expr_list_until("]")
+    return self
+end
+symbol("[").led = function(self, left)
+    self.id = "subscript"
+    self.first = left
+    self.second = expression()
+    skip("]")
     return self
 end
 
