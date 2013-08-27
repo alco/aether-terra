@@ -361,7 +361,7 @@ end
 
 -- Constructor
 symbol("{").led = function(self, left)
-    self.id = "constructor"
+    self.id = "cons"
     self.first = left
     self.second = parse_expr_list_until("}")
     return self
