@@ -10,6 +10,10 @@ function makeLiteralFloat(value)
     return { type = "float", value = value }
 end
 
+function makeLiteralString(value)
+    return { type = "string", value = value }
+end
+
 function makeIdentifier(name)
     return { type = "ident", value = name }
 end
@@ -122,6 +126,78 @@ function parseNewline(str, pos)
     return makeNewline(), pos
 end
 
+-- def escape(char):
+--     assert len(char) == 1
+--     if char == "n":
+--         return "\n"
+--     elif char == "t":
+--         return "\t"
+--     elif char == "\\":
+--         return "\\"
+--     elif char == "\"":
+--         return "\""
+--     raise TokenizerError("Unhandled escape sequence %s" % char)
+-- 
+-- def extract_string(program, pos):
+--     """Scan through the string until a closing quote is found"""
+--     string = ""
+--     escaping = False
+--     while pos < len(program):
+--         if program[pos] == '\\' and not escaping:
+--             escaping = True
+--         elif escaping:
+--             string += escape(program[pos])
+--             escaping = False
+--         elif program[pos] == '"':
+--             break
+--         else:
+--             string += program[pos]
+--         pos += 1
+--     # end while
+--     if pos == len(program):
+--         raise TokenizerError("Reached end of input when looking for a closing quote")
+--     pos += 1
+--     return string, pos
+
+function escape(char)
+    if char == "n" then
+        return "\n"
+    elseif char == "t" then
+        return "\t"
+    elseif char == "\\" then
+        return "\\"
+    elseif char == "\"" then
+        return "\""
+    end
+    error("Unhandled escaped sequence "..char)
+end
+
+function parseString(str, pos)
+    pos = pos or 1
+    -- skip initial quote
+    pos = pos + 1
+    local result = ""
+    local escaping = false
+    while pos <= str:len() do
+        local char = str:sub(pos, pos)
+        if char == "\\" and not escaping then
+            escaping = true
+        elseif escaping then
+            result = result .. escape(char)
+            escaping = false
+        elseif char == "\"" then
+            break
+        else
+            result = result .. char
+        end
+        pos = pos + 1
+    end
+    if pos > str:len() then
+        error("Reached end of input while looking for a closing quote")
+    end
+    return makeLiteralString(result), pos + 1
+end
+
 function tokenize(str)
     local tokens = {}
     local pos = 1
@@ -158,6 +234,8 @@ function tokenize(str)
             pos = pos + 1
         --elseif first:match("\n") then
             --tok, pos = parseNewline(str, pos)
+        elseif first == "\"" then
+            tok, pos = parseString(str, pos)
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2
@@ -174,6 +252,8 @@ function tokenize(str)
             end
         end
         if tok then
+            --print("got token")
+            --table_print(tok)
             table.insert(tokens, tok)
         end
     end

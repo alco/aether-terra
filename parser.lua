@@ -75,6 +75,10 @@ local symbol_table = {
         return self
     end },
 
+    string = { id = "string", lbp = 0, nud = function(self)
+        return self
+    end },
+
     nl = { id = "newline", lbp = 0 }
 }
 
@@ -138,6 +142,8 @@ function pretty_print(sym)
             str = str .. " " .. pretty_print(e[1]) .. ":" .. pretty_print(e[2])
         end
         return str .. ")"
+    elseif sym.id == "string" then
+        return "\""..sym.value.."\""
     else
         -- identifier or literal
         --print("bad symbol")
