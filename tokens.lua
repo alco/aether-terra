@@ -88,7 +88,7 @@ function parseNumber(str, pos)
     end
 end
 
-ident_pat = "[_%w][_%w0-9]+"
+ident_pat = "[_%w][_%w0-9]*"
 
 function parseIdentifier(str, pos)
     pos = pos or 1
