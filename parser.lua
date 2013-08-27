@@ -132,6 +132,12 @@ function pretty_print(sym)
             str = str .. " " .. pretty_print(e)
         end
         return str .. ")"
+    elseif sym.items then
+        local str = "("..sym.id
+        for _, e in ipairs(sym.items) do
+            str = str .. " " .. pretty_print(e[1]) .. ":" .. pretty_print(e[2])
+        end
+        return str .. ")"
     else
         -- identifier or literal
         return sym.value
@@ -207,11 +213,11 @@ function parse_expr_list_until(term)
     while true do
         if peekParseNode() and peekParseNode().id == term then
             skip(term)
-            return exprs
+            break
         else
             local node = nextParseNode()
             if node.id == term then
-                return exprs
+                break
             else
                 putBackNode(node)
             end
@@ -222,6 +228,36 @@ function parse_expr_list_until(term)
         table.insert(exprs, expr)
     end
     return exprs
+end
+
+function parse_keyval_list_until(term)
+    local items = {}
+    while true do
+        if peekParseNode() and peekParseNode().id == term then
+            skip(term)
+            break
+        else
+            local node = nextParseNode()
+            if node.id == term then
+                break
+            else
+                putBackNode(node)
+            end
+        end
+        local item = parse_keyval_expr()
+        table.insert(items, item)
+    end
+    return items
+end
+
+function parse_keyval_expr()
+    local node = nextParseNode()
+    if not (node.id == "ident" or node.id == "string") then
+        error("Bad syntax in map literal. Expected identifier or a string")
+    end
+    skip(":")  -- make it optional?
+    local expr = expression()
+    return { node, expr }
 end
 
 function advance(typ)
@@ -265,20 +301,34 @@ symbol("(", 100).nud = function(self)
     return expr
 end
 
--- Array literal
-symbol("]")
 symbol("[", 101)
+symbol("]")
+
+-- Array literal
 symbol("[").nud = function(self)
     self.id = "array"
     self.exprs = parse_expr_list_until("]")
     return self
 end
+
+-- Array subscript
 symbol("[").led = function(self, left)
     self.id = "subscript"
     self.first = left
     self.second = expression()
     skip("]")
     return self
+end
+
+symbol("{", 101)
+symbol("}")
+symbol(":")
+
+-- Dict/map
+symbol("{").nud = function(self)
+    self.id = "map"
+    self.items = parse_keyval_list_until("}")
+    return self;
 end
 
 -- Keywords

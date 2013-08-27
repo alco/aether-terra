@@ -126,7 +126,7 @@ function tokenize(str)
     local tokens = {}
     local pos = 1
     local ops = {"--", "++", "->", "==", "≠", "≤", "≥", "↑", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
-    local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ",", ":"}
+    local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ":"}
     local whitespace = {" ", ",", "\t", "\n"}
     local tok
     local stat
