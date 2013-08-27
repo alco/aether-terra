@@ -126,15 +126,7 @@ end
 function pretty_print(sym)
     if sym.first and sym.second then
         -- binary op
-        local str = "("..sym.id.." "..pretty_print(sym.first)
-        if sym.second[1] ~= nil then
-            for i = 1, #(sym.second) do
-                str = str .. " " .. pretty_print(sym.second[i])
-            end
-        else
-            str = str .. pretty_print(sym.second)
-        end
-        return str..")"
+        return "("..sym.id.." "..pretty_print(sym.first).." ".. pretty_print(sym.second)..")"
     elseif sym.first then
         -- unary op
         return "("..sym.id.." "..pretty_print(sym.first)..")"
@@ -142,6 +134,15 @@ function pretty_print(sym)
         local str = "("..sym.id
         for _, e in ipairs(sym.exprs) do
             str = str .. " " .. pretty_print(e)
+        end
+        return str .. ")"
+    elseif sym.args then
+        local str = "("..sym.id
+        if sym.name then
+            str = str .. pretty_print(sym.name)
+        end
+        for _, x in ipairs(sym.args) do
+            str = str .. " " .. pretty_print(x)
         end
         return str .. ")"
     elseif sym.items then
@@ -324,8 +325,8 @@ end
 -- Funcalls
 symbol("(").led = function(self, left)
     self.id = "funcall"
-    self.first = left
-    self.second = parse_expr_list_until(")")
+    self.name = left
+    self.args = parse_expr_list_until(")")
     return self
 end
 
@@ -335,7 +336,7 @@ symbol("]")
 -- Array literal
 symbol("[").nud = function(self)
     self.id = "array"
-    self.exprs = parse_expr_list_until("]")
+    self.args = parse_expr_list_until("]")
     return self
 end
 
@@ -362,8 +363,8 @@ end
 -- Constructor
 symbol("{").led = function(self, left)
     self.id = "cons"
-    self.first = left
-    self.second = parse_expr_list_until("}")
+    self.name = left
+    self.args = parse_expr_list_until("}")
     return self
 end
 

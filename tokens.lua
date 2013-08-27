@@ -339,6 +339,7 @@ function doexpr(line)
 
     --print("Started with line '"..line.."'")
 
+    -- FIXME: evaluate the whole expr before printing result
     if peekParseNode() ~= nil then
         --print("Peek token")
         --table_print(peekToken())
