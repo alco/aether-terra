@@ -126,7 +126,15 @@ end
 function pretty_print(sym)
     if sym.first and sym.second then
         -- binary op
-        return "("..sym.id.." "..pretty_print(sym.first).." "..pretty_print(sym.second)..")"
+        local str = "("..sym.id.." "..pretty_print(sym.first)
+        if sym.second[1] ~= nil then
+            for i = 1, #(sym.second) do
+                str = str .. " " .. pretty_print(sym.second[i])
+            end
+        else
+            str = str .. pretty_print(sym.second)
+        end
+        return str..")"
     elseif sym.first then
         -- unary op
         return "("..sym.id.." "..pretty_print(sym.first)..")"
@@ -301,12 +309,24 @@ infix("≥",  9)
 
 -- TODO: tuples
 -- ⟨ ⟩
+
+symbol("(", 100)
 symbol(")")
-symbol("(", 100).nud = function(self)
+
+-- Grouping expressions
+symbol("(").nud = function(self)
     -- self is discarded
     local expr = expression()
     skip(")")
     return expr
+end
+
+-- Funcalls
+symbol("(").led = function(self, left)
+    self.id = "funcall"
+    self.first = left
+    self.second = parse_expr_list_until(")")
+    return self
 end
 
 symbol("[", 101)
@@ -343,7 +363,7 @@ end
 symbol("{").led = function(self, left)
     self.id = "constructor"
     self.first = left
-    self.second = { id = "array", exprs = parse_expr_list_until("}") }
+    self.second = parse_expr_list_until("}")
     return self
 end
 
