@@ -341,20 +341,22 @@ function doexpr(line)
 
     --print("Started with line '"..line.."'")
 
-    -- FIXME: evaluate the whole expr before printing result
     if peekParseNode() ~= nil then
         --print("Peek token")
         --table_print(peekToken())
         local result = expression()
+
+        -- Make sure there are no left-over tokens
+        expect(nil)
+
         --print("Result node:")
         --table_print(result)
         print(pretty_print(result))
+
+        -- >>> evaluate here <<<
     else
         print("no tokens")
     end
-
-    -- Make sure there are no left-over tokens
-    expect(nil)
 
     return 3
 end
