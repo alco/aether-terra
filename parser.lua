@@ -84,7 +84,9 @@ local symbol_table = {
         return self
     end },
 
-    nl = { id = "newline", lbp = 0 }
+    nl = { id = "newline", lbp = 0 },
+
+    [";"] = { id = ";", lbp = 0 }
 }
 
 local function symbol(id, precedence)

@@ -201,8 +201,8 @@ end
 function tokenize(str)
     local tokens = {}
     local pos = 1
-    local ops = {"--", "++", "->", "==", "≠", "≤", "≥", "↑", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!"}
-    local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ":"}
+    local ops = {"--", "++", "->", "==", "≠", "≤", "≥", "↑", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
+    local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ";"}
     local whitespace = {" ", ",", "\t", "\n"}
     local tok
     local stat
@@ -341,19 +341,26 @@ function doexpr(line)
 
     --print("Started with line '"..line.."'")
 
-    if peekParseNode() ~= nil then
+    local result = nil
+    while peekParseNode() ~= nil do
         --print("Peek token")
         --table_print(peekToken())
-        local result = expression()
 
-        -- Make sure there are no left-over tokens
-        expect(nil)
+        result = expression()
+        if peekParseNode() and peekParseNode().id == ";" then
+            skip(";")
+        else
+            -- Make sure there are no left-over tokens
+            expect(nil)
+        end
 
         --print("Result node:")
         --table_print(result)
-        print(pretty_print(result))
 
         -- >>> evaluate here <<<
+    end
+    if result then
+        print(pretty_print(result))
     else
         print("no tokens")
     end
