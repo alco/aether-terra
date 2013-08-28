@@ -342,27 +342,33 @@ function doexpr(line)
     --print("Started with line '"..line.."'")
 
     local result = nil
-    while peekParseNode() ~= nil do
-        --print("Peek token")
-        --table_print(peekToken())
 
+    while peekParseNode() and peekParseNode().id == ";" do
+        skip(";")
+    end
+
+    while peekParseNode() do
         result = expression()
+
         if peekParseNode() and peekParseNode().id == ";" then
-            skip(";")
+            while peekParseNode() and peekParseNode().id == ";" do
+                skip(";")
+            end
         else
             -- Make sure there are no left-over tokens
             expect(nil)
         end
-
-        --print("Result node:")
-        --table_print(result)
-
-        -- >>> evaluate here <<<
     end
+
+    --print("Result node:")
+    --table_print(result)
+
+    -- >>> evaluate here <<<
+
     if result then
         print(pretty_print(result))
-    else
-        print("no tokens")
+    --else
+        --print("no tokens")
     end
 
     return 3
