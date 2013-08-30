@@ -191,6 +191,13 @@ function token_to_parse_node(tok)
         sym = make_symbol(tok.value)
     elseif tok.type == "term" then
         sym = make_symbol(tok.value)
+    elseif tok.type == "ident" then
+        if symbol_table[tok.value] then
+            sym = make_symbol(tok.value)
+        else
+            sym = make_symbol(tok.type)
+            sym.value = tok.value
+        end
     else
         sym = make_symbol(tok.type)
         sym.value = tok.value
@@ -333,10 +340,11 @@ function parse_slice_right()
 end
 
 function advance(typ)
-    --if 
-    --local expr = 
-    --if typ then expect(typ) end
-    --return nextToken()
+    local node = nextParseNode()
+    if node.id ~= typ then
+        error("Expected "..typ..". Got "..node.id)
+    end
+    return node
 end
 
 
@@ -439,8 +447,20 @@ symbol("{").led = function(self, left)
     return self
 end
 
+symbol("=")
+
 -- Keywords
 symbol("var").nud = function(self)
-    self.ident = advance("ident")
+    self.first = advance("ident")
+    if peekParseNode() then
+        if peekParseNode().id == "=" then
+            skip("=")
+            self.second = expression()
+        else
+            error("Bad variable definition")
+        end
+    end
     return self
 end
+
+--table_print(symbol_table)
