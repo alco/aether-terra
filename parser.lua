@@ -362,6 +362,8 @@ end
 -- 
 -- [a [b c] d[4]]
 
+infix("=", 1)
+
 infix("+", 10)
 infix("-", 10)
 infix("*", 20)
@@ -447,9 +449,15 @@ symbol("{").led = function(self, left)
     return self
 end
 
-symbol("=")
+-- Assignment
+-- FIXME: turn it into statement
+symbol("=").led = function(self, left)
+    self.first = left
+    self.second = expression()
+    return self
+end
 
--- Keywords
+-- Variable declaration
 symbol("var").nud = function(self)
     self.first = advance("ident")
     if peekParseNode() then
