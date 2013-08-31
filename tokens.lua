@@ -373,8 +373,8 @@ function doexpr(line)
             return [gencode(expr)]
         end
         --code:printpretty()
-        --code:disas()
-        --print("---")
+        code:disas()
+        print("---")
         last_result = code() --ae_eval(expr)
     end
 
@@ -388,7 +388,8 @@ function doexpr(line)
     return 3
 end
 
-C = terralib.includec("ae_runtime.h")
+Cae   = terralib.includec("ae_runtime.h")
+Cmath = terralib.includec("math.h")
 
 function gencode(expr)
     if expr.type == "int" then
@@ -401,11 +402,14 @@ function gencode(expr)
             return quote
                 var name = expr.first.value
                 var val = [gencode(expr.second)]
-                C.set_var(name, C.make_int(val))
+                Cae.set_var(name, Cae.make_int(val))
             end
-        else
-            local op = lookup_op(expr.id)
+        elseif expr.second then
+            local op = lookup_binop(expr.id)
             return op(gencode(expr.first), gencode(expr.second))
+        else
+            local op = lookup_unop(expr.id)
+            return op(gencode(expr.first))
         end            
     end
 
@@ -415,7 +419,7 @@ function gencode(expr)
             return quote
                 var name = expr.first.value
                 var val = [gencode(expr.second)]
-                C.set_var(name, C.make_int(val))
+                Cae.set_var(name, Cae.make_int(val))
             end
         end
         return nil
@@ -425,15 +429,26 @@ function gencode(expr)
         --print(expr.type)
         --print(expr.value)
         return quote
-            var val: &C.value_t = C.get_var(expr.value)
+            var val: &Cae.value_t = Cae.get_var(expr.value)
             var result: int
             if val ~= nil then
-                result = C.take_int(val)
+                result = Cae.take_int(val)
             else
                 result = 0
             end
         in
             result
+        end
+    end
+
+    if expr.id == "funcall" then
+        assert(expr.name.type == "ident")
+        if Cmath[expr.name.value] then
+            local args = terralib.newlist(expr.args)
+            args = args:map(function(e)
+                return gencode(e)
+            end)
+            return `Cmath.[expr.name.value](args)
         end
     end
 end
@@ -462,7 +477,7 @@ function make_binary_int(op)
     end
 end
 
-function lookup_op(op)
+function lookup_binop(op)
     if op == "+" then
         return function(a, b)
             return `a + b
@@ -483,6 +498,50 @@ function lookup_op(op)
             return `a / b
         end
     end
+    if op == "**" then
+        return function(a, b)
+            return `Cmath.pow(a, b)
+        end
+    end
+    if op == "==" then
+        return function(a, b)
+            return `a == b
+        end
+    end
+    if op == "≠" then
+        return function(a, b)
+            return `a ~= b
+        end
+    end
+    if op == "≤" then
+        return function(a, b)
+            return `a <= b
+        end
+    end
+    if op == "<" then
+        return function(a, b)
+            return `a < b
+        end
+    end
+    if op == "≥" then
+        return function(a, b)
+            return `a >= b
+        end
+    end
+    if op == ">" then
+        return function(a, b)
+            return `a > b
+        end
+    end
 end
 
+function lookup_unop(op)
+    if op == "-" then
+        return function(a)
+            return `-a
+        end
+    end
+end
+
+-- Stores all variables declared in the top-level scope
 ae_vars = {}
