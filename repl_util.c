@@ -6,6 +6,8 @@
 
 #include "terra.h"
 
+#include "ae_runtime.h"
+
 
 ///////////////////////////////////////
 
@@ -14,6 +16,52 @@ static History  *el_hist;
 
 static lua_State *lua_state;
 
+///////////////////////////////////////
+
+value_t make_int(int v)
+{
+    return (value_t){ "int", (void *)(long)v };
+}
+
+int take_int(const value_t *v)
+{
+    if (v)
+        return (int)v->value;
+    return 0;
+}
+
+void set_var(const char *name, const value_t v)
+{
+    int top = lua_gettop(lua_state);
+
+    lua_getfield(lua_state, LUA_GLOBALSINDEX, "ae_vars");
+
+    value_t *addr = (value_t*)lua_newuserdata(lua_state, sizeof(value_t));
+    assert(addr);
+    *addr = v;
+    lua_setfield(lua_state, top+1, name);
+
+    lua_pop(lua_state, 1);
+    assert(lua_gettop(lua_state) == top);
+}
+
+const value_t *get_var(const char *name)
+{
+    int top = lua_gettop(lua_state);
+
+    lua_getfield(lua_state, LUA_GLOBALSINDEX, "ae_vars");
+    lua_getfield(lua_state, top+1, name);
+    value_t *addr = (value_t*)lua_touserdata(lua_state, top+2);
+    if (!addr) {
+        printf("Undefined variable %s\n", name);
+    }
+
+    lua_pop(lua_state, 2);
+    assert(lua_gettop(lua_state) == top);
+    return addr;
+}
+
+///////////////////////////////////////////////////
 
 static void die(lua_State * L) {
     fprintf(stderr, "%s\n",luaL_checkstring(L,-1));

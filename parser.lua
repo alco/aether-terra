@@ -462,6 +462,7 @@ infix("=")
 
 -- Variable declaration
 symbol("var").nud = function(self)
+    self.type = "var"
     local expr = expression()
     if expr.id == "ident" then
         self.first = expr

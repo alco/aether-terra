@@ -372,9 +372,9 @@ function doexpr(line)
         local code = terra()
             return [gencode(expr)]
         end
-        code:printpretty()
-        code:disas()
-        print("---")
+        --code:printpretty()
+        --code:disas()
+        --print("---")
         last_result = code() --ae_eval(expr)
     end
 
@@ -388,14 +388,53 @@ function doexpr(line)
     return 3
 end
 
+C = terralib.includec("ae_runtime.h")
+
 function gencode(expr)
     if expr.type == "int" then
         return tonumber(expr.value)
     end
 
     if expr.type == "operator" then
-        local op = lookup_op(expr.id)
-        return op(gencode(expr.first), gencode(expr.second))
+        if expr.id == "=" then
+            assert(expr.first.type == "ident")
+            return quote
+                var name = expr.first.value
+                var val = [gencode(expr.second)]
+                C.set_var(name, C.make_int(val))
+            end
+        else
+            local op = lookup_op(expr.id)
+            return op(gencode(expr.first), gencode(expr.second))
+        end            
+    end
+
+    if expr.type == "var" then
+        if expr.second then
+            assert(expr.first.type == "ident")
+            return quote
+                var name = expr.first.value
+                var val = [gencode(expr.second)]
+                C.set_var(name, C.make_int(val))
+            end
+        end
+        return nil
+    end
+
+    if expr.type == "ident" then
+        --print(expr.type)
+        --print(expr.value)
+        return quote
+            var val: &C.value_t = C.get_var(expr.value)
+            var result: int
+            if val ~= nil then
+                result = C.take_int(val)
+            else
+                result = 0
+            end
+        in
+            result
+        end
     end
 end
 
@@ -429,4 +468,21 @@ function lookup_op(op)
             return `a + b
         end
     end
+    if op == "-" then
+        return function(a, b)
+            return `a - b
+        end
+    end
+    if op == "*" then
+        return function(a, b)
+            return `a * b
+        end
+    end
+    if op == "/" then
+        return function(a, b)
+            return `a / b
+        end
+    end
 end
+
+ae_vars = {}
