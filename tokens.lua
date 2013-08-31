@@ -369,14 +369,46 @@ function doexpr(line)
     for _, expr in ipairs(exprs) do
         -- >>> typecheck <<<
         -- >>> evaluate <<<
-        last_result = expr
+        last_result = ae_eval(expr)
     end
 
     if last_result then
-        print(pretty_print(last_result))
+        --print(pretty_print(last_result))
+        print(last_result)
     --else
         --print("no tokens")
     end
 
     return 3
+end
+
+function ae_eval(expr)
+    if expr.type == "int" then
+        return make_literal(tonumber(expr.value))()
+    end
+
+    if expr.type == "operator" then
+        local op = lookup_op(expr.id)
+        return make_binary_int(op)(ae_eval(expr.first), ae_eval(expr.second))
+    end
+end
+
+function make_literal(lit)
+    return terra()
+        return lit
+    end
+end
+
+function make_binary_int(op)
+    return terra(a: int, b: int)
+        return op(a, b)
+    end
+end
+
+function lookup_op(op)
+    if op == "+" then
+        return terra(a: int, b: int)
+            return a + b
+        end
+    end
 end
