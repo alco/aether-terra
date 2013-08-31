@@ -459,14 +459,14 @@ end
 
 -- Variable declaration
 symbol("var").nud = function(self)
-    self.first = advance("ident")
-    if peekParseNode() then
-        if peekParseNode().id == "=" then
-            skip("=")
-            self.second = expression()
-        else
-            error("Bad variable definition")
-        end
+    local expr = expression()
+    if expr.id == "ident" then
+        self.first = expr
+    elseif expr.id == "=" then
+        self.first = expr.first
+        self.second = expr.second
+    else
+        error("Bad variable definition")
     end
     return self
 end
