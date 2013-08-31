@@ -369,7 +369,13 @@ function doexpr(line)
     for _, expr in ipairs(exprs) do
         -- >>> typecheck <<<
         -- >>> evaluate <<<
-        last_result = ae_eval(expr)
+        local code = terra()
+            return [gencode(expr)]
+        end
+        code:printpretty()
+        code:disas()
+        print("---")
+        last_result = code() --ae_eval(expr)
     end
 
     if last_result then
@@ -382,14 +388,26 @@ function doexpr(line)
     return 3
 end
 
-function ae_eval(expr)
+function gencode(expr)
     if expr.type == "int" then
-        return make_literal(tonumber(expr.value))()
+        return tonumber(expr.value)
     end
 
     if expr.type == "operator" then
         local op = lookup_op(expr.id)
-        return make_binary_int(op)(ae_eval(expr.first), ae_eval(expr.second))
+        return op(gencode(expr.first), gencode(expr.second))
+    end
+end
+
+function ae_eval(expr)
+    local fun = gencode(expr)
+    
+    if expr.type == "int" then
+        return fun()
+    end
+
+    if expr.type == "operator" then
+        return fun(ae_eval(expr.first), ae_eval(expr.second))
     end
 end
 
@@ -407,8 +425,8 @@ end
 
 function lookup_op(op)
     if op == "+" then
-        return terra(a: int, b: int)
-            return a + b
+        return function(a, b)
+            return `a + b
         end
     end
 end
