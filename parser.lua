@@ -364,11 +364,23 @@ end
 
 infix("=", 1)
 
+-- Comparisons
+infix("==", 9)
+infix("≠",  9)
+infix("<",  9)
+infix("≤",  9)
+infix(">",  9)
+infix("≥",  9)
+
+-- Arithmetic
 infix("+", 10)
 infix("-", 10)
 infix("*", 20)
 infix("/", 20)
 infix("•", 20)
+
+-- Key-value pair
+infix(":", 25)
 
 infix_r("↑",  30)  -- exponentiation
 infix_r("**", 30)  -- exponentiation
@@ -377,15 +389,9 @@ infix_r("**", 30)  -- exponentiation
 --prefix("+", 40)
 prefix("-", 40)
 
---infix(":", 41)
 
--- Comparisons
-infix("==", 9)
-infix("≠",  9)
-infix("<",  9)
-infix("≤",  9)
-infix(">",  9)
-infix("≥",  9)
+-- Access
+infix(".", 50)
 
 -- TODO: tuples
 -- ⟨ ⟩
@@ -430,14 +436,15 @@ symbol("[").led = function(self, left)
     return self
 end
 
+
 symbol("{", 101)
 symbol("}")
-symbol(":")
+--symbol(":")
 
 -- Dict/map
 symbol("{").nud = function(self)
     self.id = "map"
-    self.items = parse_keyval_list_until("}")
+    self.args = parse_expr_list_until("}")
     return self
 end
 
@@ -451,11 +458,7 @@ end
 
 -- Assignment
 -- FIXME: turn it into statement
-symbol("=").led = function(self, left)
-    self.first = left
-    self.second = expression()
-    return self
-end
+infix("=")
 
 -- Variable declaration
 symbol("var").nud = function(self)
