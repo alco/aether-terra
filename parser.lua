@@ -68,21 +68,40 @@ end
 --------------------------
 
 local symbol_table = {
-    int = { id = "int", lbp = 0, nud = function(self)
-        return self
-    end },
+    int = { 
+        id = "int", 
+        valtype = "int",
+        lbp = 0, 
+        nud = function(self)
+            return self
+        end 
+    },
 
-    float = { id = "float", lbp = 0, nud = function(self)
-        return self
-    end },
+    float = { 
+        id = "float", 
+        valtype = "float",
+        lbp = 0, 
+        nud = function(self)
+            return self
+        end 
+    },
 
-    ident = { id = "ident", lbp = 0, nud = function(self)
-        return self
-    end },
+    ident = { 
+        id = "ident", 
+        lbp = 0, 
+        nud = function(self)
+            return self
+        end 
+    },
 
-    string = { id = "string", lbp = 0, nud = function(self)
-        return self
-    end },
+    string = { 
+        id = "string", 
+        valtype = "string",
+        lbp = 0, 
+        nud = function(self)
+            return self
+        end 
+    },
 
     nl = { id = "newline", lbp = 0 },
 

@@ -368,6 +368,11 @@ function doexpr(line)
     local last_result = nil
     for _, expr in ipairs(exprs) do
         -- >>> typecheck <<<
+        local types_are_ok = typecheck(expr)
+        if not types_are_ok then
+            error("Typecheck failed for expr: "..pretty_print(expr))
+        end
+
         -- >>> evaluate <<<
         local code = terra()
             return [gencode(expr)]
@@ -387,6 +392,11 @@ function doexpr(line)
     end
 
     return 3
+end
+
+
+function typecheck(expr)
+    return false
 end
 
 Cae   = terralib.includec("ae_runtime.h")
