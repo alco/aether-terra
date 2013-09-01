@@ -133,6 +133,21 @@ const char *store_string(const char *name, const char *v)
     return v;
 }
 
+int get_int(const char *name)
+{
+    return take_int(get_var(name));
+}
+
+float get_float(const char *name)
+{
+    return take_float(get_var(name));
+}
+
+const char *get_string(const char *name)
+{
+    return take_string(get_var(name));
+}
+
 void print_val(const value_t *val)
 {
     if (!val) {
@@ -140,12 +155,17 @@ void print_val(const value_t *val)
     } else if (is_int(val)) {
         printf("%d\n", (int)val->value);
     } else if (is_float(val)) {
-        printf("%g\n", *(float *)&val->value);
+        printf("%f\n", *(float *)&val->value);
     } else if (is_string(val)) {
         printf("%s\n", val->value);
     } else {
         printf("%p\n", val->value);
     }
+}
+
+void print_result()
+{
+    print_val(get_var("_"));
 }
 
 ///////////////////////////////////////////////////

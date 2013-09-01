@@ -373,25 +373,31 @@ function doexpr(line)
             error("Typecheck failed for expr: "..pretty_print(expr))
         end
 
+        --if typed_ast.valtype then
+            --print("Typed root type = "..typed_ast.valtype)
+        --end
+
         -- >>> evaluate <<<
         local code = terra()
             return [gencode(typed_ast)]
         end
-        code:printpretty()
-        code:disas()
-        print("---")
-        last_result = code() --ae_eval(expr)
+        --code:printpretty()
+        --code:disas()
+        --print("---")
+        local st_fn
+        if typed_ast.valtype == "int" then
+            st_fn = Cae.store_int
+        elseif typed_ast.valtype == "float" then
+            st_fn = Cae.store_float
+        elseif typed_ast.valtype == "string" then
+            st_fn = Cae.store_string
+        end
+        (terra() st_fn("_", code()) end)()
     end
 
-    if last_result then
-        --print(pretty_print(last_result))
-        print(last_result)
-        --terra
-    --else
-        --print("no tokens")
-    end
+    (terra() Cae.print_result() end)()
 
-    return 3
+    return 1
 end
 
 Cae   = terralib.includec("ae_runtime.h")
@@ -483,29 +489,22 @@ ae_env = {
 }
 
 extract_var = {
-    int = Cae.take_int,
-    float = Cae.take_float
+    int = Cae.get_int,
+    float = Cae.get_float
     --string = Cae.take_string
 }
 
 function get_value_type(val)
     local ti = (terra(val: &Cae.value_t)
-        if Cstr.strcmp(val.type, "int") == 0 then
+        if Cae.is_int(val) then
             return 1
-        elseif Cstr.strcmp(val.type, "float") == 0 then
+        elseif Cae.is_float(val) then
             return 2
-        elseif Cstr.strcmp(val.type, "string") == 0 then
+        elseif Cae.is_string(val) then
             return 3
         end
     end)(val)
-    if ti == 1 then
-        return "int"
-    elseif ti == 2 then
-        return "float"
-    elseif ti == 3 then
-        return "string"
-    end
-    return nil
+    return ({"int", "float", "string"})[ti]
 end
 
 function typecheck(expr)
@@ -584,7 +583,7 @@ function typecheck(expr)
 
         return {
             type = "funcall",
-            valtype = typed_fn.valtype,
+            valtype = fn_impl.valtype,
             impl = fn_impl.impl,
             args = typed_args
         }
@@ -675,9 +674,8 @@ function gencode(expr)
     end
 
     if expr.type == "ident_var" then
-        print(expr.valtype)
         local fn = extract_var[expr.valtype]
-        return `[fn](Cae.get_var(expr.value))
+        return `[fn](expr.value)
     end
 
     if expr.type == "operator" then
