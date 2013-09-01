@@ -87,6 +87,19 @@ const value_t *get_var(const char *name)
     return addr;
 }
 
+void print_val(const value_t *val)
+{
+    if (!val) {
+        printf("nil\n");
+    } else if (is_int(val)) {
+        printf("%d\n", (int)val->value);
+    } else if (is_float(val)) {
+        printf("%g\n", *(float *)&val->value);
+    } else {
+        printf("%p\n", val->value);
+    }
+}
+
 ///////////////////////////////////////////////////
 
 static void die(lua_State * L) {

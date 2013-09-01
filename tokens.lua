@@ -381,6 +381,7 @@ function doexpr(line)
     if last_result then
         --print(pretty_print(last_result))
         print(last_result)
+        --terra
     --else
         --print("no tokens")
     end
@@ -391,18 +392,24 @@ end
 Cae   = terralib.includec("ae_runtime.h")
 Cmath = terralib.includec("math.h")
 
+function wrap(val, typ)
+    if typ == "int" then
+        return `Cae.make_int(val)
+    elseif typ == "float" then
+        return `Cae.make_float(val)
+    else
+        return val
+    end
+end
+
 function assign(expr)
     assert(expr.first.type == "ident")
-    local mkfun
-    if expr.second.type == "int" then
-        mkfun = Cae.make_int
-    elseif expr.second.type == "float" then
-        mkfun = Cae.make_float
-    end
     return quote
         var name = expr.first.value
         var val = [gencode(expr.second)]
-        Cae.set_var(name, [mkfun](val))
+        Cae.set_var(name, [wrap(val, "int")])
+    in
+        val
     end
 end    
 

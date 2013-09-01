@@ -17,4 +17,8 @@ _Bool is_float(const value_t *v);
 void set_var(const char *name, const value_t v);
 const value_t *get_var(const char *name);
 
+
+void print_val(const value_t *val);
+
+
 #endif // AE_RUNTIME_H
