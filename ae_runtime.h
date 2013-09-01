@@ -18,6 +18,11 @@ void set_var(const char *name, const value_t v);
 const value_t *get_var(const char *name);
 
 
+int         store_int(const char *name, int v);
+float       store_float(const char *name, float v);
+const char *store_string(const char *name, const char *v);
+
+
 void print_val(const value_t *val);
 
 

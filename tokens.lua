@@ -377,9 +377,9 @@ function doexpr(line)
         local code = terra()
             return [gencode(typed_ast)]
         end
-        --code:printpretty()
-        --code:disas()
-        --print("---")
+        code:printpretty()
+        code:disas()
+        print("---")
         last_result = code() --ae_eval(expr)
     end
 
@@ -394,7 +394,10 @@ function doexpr(line)
     return 3
 end
 
+Cae   = terralib.includec("ae_runtime.h")
 Cmath = terralib.includec("math.h")
+Cstd  = terralib.includec("stdlib.h")
+Cstr  = terralib.includec("string.h")
 
 ae_env = {
     sin = {
@@ -411,8 +414,99 @@ ae_env = {
             }
         },
         nargs = 1
+    },
+    ["+"] = {
+        impls = {
+            int = {
+                impl = terra(a: int, b: int) return a + b end,
+                valtype = "int",
+                sig = {"int", "int"}
+            },
+            float = {
+                impl = terra(a: float, b: float) return a + b end,
+                valtype = "float",
+                sig = {"float", "float"}
+            }
+        },
+        nargs = 2
+    },
+    ["-"] = {
+        impls = {
+            int = {
+                impl = terra(a: int, b: int) return a - b end,
+                valtype = "int",
+                sig = {"int", "int"}
+            },
+            float = {
+                impl = terra(a: float, b: float) return a - b end,
+                valtype = "float",
+                sig = {"float", "float"}
+            }
+        },
+        nargs = 2
+    },
+    ["minus"] = {
+        impls = {
+            int = {
+                impl = terra(a: int) return -a end,
+                valtype = "int",
+                sig = {"int"}
+            },
+            float = {
+                impl = terra(a: float) return -a end,
+                valtype = "float",
+                sig = {"float"}
+            }
+        },
+        nargs = 1
+    },
+    ["="] = {
+        impls = {
+            int = {
+                impl = Cae.store_int,
+                valtype = "int",
+                sig = {"string", "int"}
+            },
+            float = {
+                impl = Cae.store_float,
+                valtype = "float",
+                sig = {"string", "float"}
+            },
+            string = {
+                impl = Cae.store_string,
+                valtype = "string",
+                sig = {"string", "string"}
+            }
+        },
+        nargs = 2
     }
 }
+
+extract_var = {
+    int = Cae.take_int,
+    float = Cae.take_float
+    --string = Cae.take_string
+}
+
+function get_value_type(val)
+    local ti = (terra(val: &Cae.value_t)
+        if Cstr.strcmp(val.type, "int") == 0 then
+            return 1
+        elseif Cstr.strcmp(val.type, "float") == 0 then
+            return 2
+        elseif Cstr.strcmp(val.type, "string") == 0 then
+            return 3
+        end
+    end)(val)
+    if ti == 1 then
+        return "int"
+    elseif ti == 2 then
+        return "float"
+    elseif ti == 3 then
+        return "string"
+    end
+    return nil
+end
 
 function typecheck(expr)
     if expr.valtype then
@@ -434,7 +528,7 @@ function typecheck(expr)
         if ae_vars[expr.value] then
             return {
                 type = "ident_var",
-                valtype = ae_vars[expr.value].valtype,
+                valtype = get_value_type(ae_vars[expr.value]), --ae_vars[expr.value].valtype,
                 value = expr.value
             }
         elseif ae_env[expr.value] then
@@ -453,12 +547,14 @@ function typecheck(expr)
             }
         end
     elseif expr.id == "funcall" then
-        local typed_head = typecheck(expr.name)
-        if typed_head.type ~= "ident_fun" then
+        --table_print(expr)
+
+        local typed_fn = typecheck(expr.name)
+        if typed_fn.type ~= "ident_fun" then
             error("Bad function in funcall: "..pretty_print(expr))
         end
 
-        local fn = ae_env[typed_head.value]
+        local fn = ae_env[typed_fn.value]
         if fn.nargs ~= #expr.args then
             error("Wrong number of arguments in funcall: "..pretty_print(expr))
         end
@@ -488,19 +584,46 @@ function typecheck(expr)
 
         return {
             type = "funcall",
-            valtype = typed_head.valtype,
+            valtype = typed_fn.valtype,
             impl = fn_impl.impl,
             args = typed_args
         }
     elseif expr.type == "operator" then
         if expr.first and expr.second then
             -- binary
-            expr.valtype = unify_types_2(expr.id, expr.first, expr.second)
-            return expr.valtype
+            local args
+            if expr.id == "=" then
+                args = { { type="string", valtype="string", value=expr.first.value },
+                         expr.second }
+            else
+                args = {expr.first, expr.second}
+            end
+            return typecheck({
+                id = "funcall",
+                name = {
+                    type = "ident",
+                    value = expr.id
+                },
+                args = args
+            })
+            --expr.valtype = unify_types_2(expr.id, expr.first, expr.second)
+            --return expr.valtype
         elseif expr.first then
             -- unary
-            expr.valtype = expr.first.valtype
-            return expr.valtype
+            local id
+            if expr.id == "-" then
+                id = "minus"
+            else
+                id = expr.id
+            end
+            return typecheck({
+                id = "funcall",
+                name = {
+                    type = "ident",
+                    value = id
+                },
+                args = {expr.first}
+            })
         end
     end
 
@@ -509,8 +632,6 @@ end
 
 function unify_types_2(op, a, b)
 end
-
-Cae   = terralib.includec("ae_runtime.h")
 
 function wrap(val, typ)
     if typ == "int" then
@@ -542,6 +663,23 @@ function gencode(expr)
         return `[float](expr.value)
     end
 
+    if expr.type == "string" then
+        return quote
+            var len = Cstr.strlen(expr.value)
+            var str: &int8 = [&int8](Cstd.malloc(len + 1))
+            Cstr.memcpy(str, expr.value, len)
+            str[len] = 0
+        in
+            str
+        end
+    end
+
+    if expr.type == "ident_var" then
+        print(expr.valtype)
+        local fn = extract_var[expr.valtype]
+        return `[fn](Cae.get_var(expr.value))
+    end
+
     if expr.type == "operator" then
         if expr.id == "=" then
             return assign(expr)
@@ -561,46 +699,46 @@ function gencode(expr)
         return nil
     end
 
-    if expr.type == "ident" then
-        --print(expr.type)
-        --print(expr.value)
-        local typ = (terra()
-            var val: &Cae.value_t = Cae.get_var(expr.value)
-            if val == nil then
-                return 0
-            elseif Cae.is_int(val) then
-                return 1
-            elseif Cae.is_float(val) then
-                return 2
-            end
-        end)()
-        --print(typ)
-        if typ == 1 then
-            return quote
-                var val: &Cae.value_t = Cae.get_var(expr.value)
-                var result: int
-                if val ~= nil then
-                    result = Cae.take_int(val)
-                else
-                    result = 0
-                end
-            in
-                result
-            end
-        elseif typ == 2 then
-            return quote
-                var val: &Cae.value_t = Cae.get_var(expr.value)
-                var result: float
-                if val ~= nil then
-                    result = Cae.take_float(val)
-                else
-                    result = 0
-                end
-            in
-                result
-            end
-        end
-    end
+    --if expr.type == "ident" then
+        ----print(expr.type)
+        ----print(expr.value)
+        --local typ = (terra()
+            --var val: &Cae.value_t = Cae.get_var(expr.value)
+            --if val == nil then
+                --return 0
+            --elseif Cae.is_int(val) then
+                --return 1
+            --elseif Cae.is_float(val) then
+                --return 2
+            --end
+        --end)()
+        ----print(typ)
+        --if typ == 1 then
+            --return quote
+                --var val: &Cae.value_t = Cae.get_var(expr.value)
+                --var result: int
+                --if val ~= nil then
+                    --result = Cae.take_int(val)
+                --else
+                    --result = 0
+                --end
+            --in
+                --result
+            --end
+        --elseif typ == 2 then
+            --return quote
+                --var val: &Cae.value_t = Cae.get_var(expr.value)
+                --var result: float
+                --if val ~= nil then
+                    --result = Cae.take_float(val)
+                --else
+                    --result = 0
+                --end
+            --in
+                --result
+            --end
+        --end
+    --end
 
     if expr.type == "funcall" then
         local args = terralib.newlist(expr.args)

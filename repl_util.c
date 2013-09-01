@@ -37,6 +37,8 @@ _Bool is_int(const value_t *v)
     return 0;
 }
 
+///
+
 value_t make_float(float v)
 {
     return (value_t){ "float", (void *)*(long *)&v };
@@ -55,6 +57,29 @@ _Bool is_float(const value_t *v)
         return strcmp(v->type, "float") == 0;
     return 0;
 }
+
+///
+
+value_t make_string(const char *v)
+{
+    return (value_t){ "string", (void *)v };
+}
+
+const char *take_string(const value_t *v)
+{
+    if (v)
+        return (const char *)v->value;
+    return 0;
+}
+
+_Bool is_string(const value_t *v)
+{
+    if (v)
+        return strcmp(v->type, "string") == 0;
+    return 0;
+}
+
+///
 
 void set_var(const char *name, const value_t v)
 {
@@ -87,6 +112,27 @@ const value_t *get_var(const char *name)
     return addr;
 }
 
+int store_int(const char *name, int v)
+{
+    value_t val = make_int(v);
+    set_var(name, val);
+    return v;
+}
+
+float store_float(const char *name, float v)
+{
+    value_t val = make_float(v);
+    set_var(name, val);
+    return v;
+}
+
+const char *store_string(const char *name, const char *v)
+{
+    value_t val = make_string(v);
+    set_var(name, val);
+    return v;
+}
+
 void print_val(const value_t *val)
 {
     if (!val) {
@@ -95,6 +141,8 @@ void print_val(const value_t *val)
         printf("%d\n", (int)val->value);
     } else if (is_float(val)) {
         printf("%g\n", *(float *)&val->value);
+    } else if (is_string(val)) {
+        printf("%s\n", val->value);
     } else {
         printf("%p\n", val->value);
     }
