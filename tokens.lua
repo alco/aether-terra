@@ -44,7 +44,7 @@ function parseNumber(str, pos)
     --print("|||")
     --print("Current pos = "..pos)
     --print("Leftover string = "..str:sub(pos))
-    
+
     if str:sub(pos, pos) == "." then
         typ = "float"
         result = result .. "."
@@ -137,7 +137,7 @@ end
 --     elif char == "\"":
 --         return "\""
 --     raise TokenizerError("Unhandled escape sequence %s" % char)
--- 
+--
 -- def extract_string(program, pos):
 --     """Scan through the string until a closing quote is found"""
 --     string = ""
@@ -315,7 +315,7 @@ function get_token_fn(line)
             while opt and opt.async do
                 opt = coroutine.yield(nil)
             end
-            
+
             line = aether_readline()
             if line == nil then
                 -- EOF
@@ -421,7 +421,7 @@ function assign(expr)
     in
         val
     end
-end    
+end
 
 function gencode(expr)
     if expr.type == "int" then
@@ -441,7 +441,7 @@ function gencode(expr)
         else
             local op = lookup_unop(expr.id)
             return op(gencode(expr.first))
-        end            
+        end
     end
 
     if expr.type == "var" then
@@ -530,7 +530,7 @@ end
 
 function ae_eval(expr)
     local fun = gencode(expr)
-    
+
     if expr.type == "int" then
         return fun()
     end

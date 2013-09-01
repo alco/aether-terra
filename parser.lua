@@ -68,39 +68,39 @@ end
 --------------------------
 
 local symbol_table = {
-    int = { 
-        id = "int", 
+    int = {
+        id = "int",
         valtype = "int",
-        lbp = 0, 
+        lbp = 0,
         nud = function(self)
             return self
-        end 
+        end
     },
 
-    float = { 
-        id = "float", 
+    float = {
+        id = "float",
         valtype = "float",
-        lbp = 0, 
+        lbp = 0,
         nud = function(self)
             return self
-        end 
+        end
     },
 
-    ident = { 
-        id = "ident", 
-        lbp = 0, 
+    ident = {
+        id = "ident",
+        lbp = 0,
         nud = function(self)
             return self
-        end 
+        end
     },
 
-    string = { 
-        id = "string", 
+    string = {
+        id = "string",
         valtype = "string",
-        lbp = 0, 
+        lbp = 0,
         nud = function(self)
             return self
-        end 
+        end
     },
 
     nl = { id = "newline", lbp = 0 },
@@ -378,7 +378,7 @@ end
 --
 -- [:a 1 :b 2 :c 3]
 -- [a: 1, b: 2, c: 3]
--- 
+--
 -- [a [b c] d[4]]
 
 infix("=", 1)
