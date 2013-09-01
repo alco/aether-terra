@@ -408,19 +408,11 @@ end
 
 function gencode(expr)
     if expr.type == "int" then
-        return quote
-            var x: int = [tonumber(expr.value)]
-        in
-            x
-        end
+        return `[int]([tonumber(expr.value)])
     end
 
     if expr.type == "float" then
-        return quote
-            var x: float = [tonumber(expr.value)]
-        in
-            x
-        end
+        return `[float]([tonumber(expr.value)])
     end
 
     if expr.type == "operator" then
