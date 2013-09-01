@@ -368,14 +368,14 @@ function doexpr(line)
     local last_result = nil
     for _, expr in ipairs(exprs) do
         -- >>> typecheck <<<
-        local types_are_ok = typecheck(expr)
-        if not types_are_ok then
+        local typed_ast = typecheck(expr)
+        if not typed_ast then
             error("Typecheck failed for expr: "..pretty_print(expr))
         end
 
         -- >>> evaluate <<<
         local code = terra()
-            return [gencode(expr)]
+            return [gencode(typed_ast)]
         end
         --code:printpretty()
         --code:disas()
@@ -394,13 +394,123 @@ function doexpr(line)
     return 3
 end
 
+Cmath = terralib.includec("math.h")
+
+ae_env = {
+    sin = {
+        impls = {
+            float = {
+                impl = Cmath.sinf,
+                valtype = "float",
+                sig = {"float"}
+            },
+            double = {
+                impl = Cmath.sin,
+                valtype = "double",
+                sig = {"double"}
+            }
+        },
+        nargs = 1
+    }
+}
 
 function typecheck(expr)
-    return false
+    if expr.valtype then
+        -- must be a literal
+        local value
+        if expr.type == "int" or expr.type == "float" then
+            value = tonumber(expr.value)
+        elseif expr.type == "string" then
+            value = expr.value
+        else
+            error("Unrecognized literal: "..pretty_print(expr))
+        end
+        return {
+            type = expr.type,
+            valtype = expr.valtype,
+            value = value
+        }
+    elseif expr.type == "ident" then
+        if ae_vars[expr.value] then
+            return {
+                type = "ident_var",
+                valtype = ae_vars[expr.value].valtype,
+                value = expr.value
+            }
+        elseif ae_env[expr.value] then
+            return {
+                type = "ident_fun",
+                --valtype = ae_env[expr.value].valtype,
+                --sig = ae_env[expr.value].sig,
+                value = expr.value
+            }
+        elseif expr.value == "prpr" or expr.value == "pras" or expr.value == "prall" then
+            return {
+                type = "ident_fun",
+                valtype = "...",
+                sig = "...",
+                value = expr.value
+            }
+        end
+    elseif expr.id == "funcall" then
+        local typed_head = typecheck(expr.name)
+        if typed_head.type ~= "ident_fun" then
+            error("Bad function in funcall: "..pretty_print(expr))
+        end
+
+        local fn = ae_env[typed_head.value]
+        if fn.nargs ~= #expr.args then
+            error("Wrong number of arguments in funcall: "..pretty_print(expr))
+        end
+
+        local typed_args = {}
+        for _, e in ipairs(expr.args) do
+            table.insert(typed_args, typecheck(e))
+        end
+
+        local fn_impl
+        for typ, impl in pairs(fn.impls) do
+            local success = true
+            for i, arg in ipairs(typed_args) do
+                if arg.valtype ~= impl.sig[i] then
+                    success = false
+                    break
+                end
+            end
+            if success then
+                fn_impl = impl
+                break
+            end
+        end
+        if not fn_impl then
+            error("Suitable function not found for expr: "..pretty_print(expr))
+        end
+
+        return {
+            type = "funcall",
+            valtype = typed_head.valtype,
+            impl = fn_impl.impl,
+            args = typed_args
+        }
+    elseif expr.type == "operator" then
+        if expr.first and expr.second then
+            -- binary
+            expr.valtype = unify_types_2(expr.id, expr.first, expr.second)
+            return expr.valtype
+        elseif expr.first then
+            -- unary
+            expr.valtype = expr.first.valtype
+            return expr.valtype
+        end
+    end
+
+    error("Typecheck failed on expr: "..pretty_print(expr))
+end
+
+function unify_types_2(op, a, b)
 end
 
 Cae   = terralib.includec("ae_runtime.h")
-Cmath = terralib.includec("math.h")
 
 function wrap(val, typ)
     if typ == "int" then
@@ -425,11 +535,11 @@ end
 
 function gencode(expr)
     if expr.type == "int" then
-        return `[int]([tonumber(expr.value)])
+        return `[int](expr.value)
     end
 
     if expr.type == "float" then
-        return `[float]([tonumber(expr.value)])
+        return `[float](expr.value)
     end
 
     if expr.type == "operator" then
@@ -492,39 +602,44 @@ function gencode(expr)
         end
     end
 
-    if expr.id == "funcall" then
-        assert(expr.name.type == "ident")
-        -- Bulitin functions go first
-        if expr.name.value == "pras" then
-            local code = terra()
-                return [gencode(expr.args[1])]
-            end
-            code:disas()
-            return 0
-        end
-        if expr.name.value == "prpr" then
-            local code = terra()
-                return [gencode(expr.args[1])]
-            end
-            code:printpretty()
-            return 0
-        end
-        if expr.name.value == "prall" then
-            local code = terra()
-                return [gencode(expr.args[1])]
-            end
-            code:printpretty()
-            code:disas()
-            return 0
-        end
+    if expr.type == "funcall" then
+        local args = terralib.newlist(expr.args)
+        args = args:map(function(e)
+            return gencode(e)
+        end)
+        return `expr.impl(args)
+        --assert(expr.name.type == "ident")
+        ---- Bulitin functions go first
+        --if expr.name.value == "pras" then
+            --local code = terra()
+                --return [gencode(expr.args[1])]
+            --end
+            --code:disas()
+            --return 0
+        --end
+        --if expr.name.value == "prpr" then
+            --local code = terra()
+                --return [gencode(expr.args[1])]
+            --end
+            --code:printpretty()
+            --return 0
+        --end
+        --if expr.name.value == "prall" then
+            --local code = terra()
+                --return [gencode(expr.args[1])]
+            --end
+            --code:printpretty()
+            --code:disas()
+            --return 0
+        --end
 
-        if Cmath[expr.name.value] then
-            local args = terralib.newlist(expr.args)
-            args = args:map(function(e)
-                return gencode(e)
-            end)
-            return `Cmath.[expr.name.value](args)
-        end
+        --if Cmath[expr.name.value] then
+            --local args = terralib.newlist(expr.args)
+            --args = args:map(function(e)
+                --return gencode(e)
+            --end)
+            --return `Cmath.[expr.name.value](args)
+        --end
     end
 end
 
