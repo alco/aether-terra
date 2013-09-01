@@ -372,7 +372,7 @@ function doexpr(line)
         local code = terra()
             return [gencode(expr)]
         end
-        --code:printpretty()
+        code:printpretty()
         code:disas()
         print("---")
         last_result = code() --ae_eval(expr)
@@ -391,19 +391,41 @@ end
 Cae   = terralib.includec("ae_runtime.h")
 Cmath = terralib.includec("math.h")
 
+function assign(expr)
+    assert(expr.first.type == "ident")
+    local mkfun
+    if expr.second.type == "int" then
+        mkfun = Cae.make_int
+    elseif expr.second.type == "float" then
+        mkfun = Cae.make_float
+    end
+    return quote
+        var name = expr.first.value
+        var val = [gencode(expr.second)]
+        Cae.set_var(name, [mkfun](val))
+    end
+end    
+
 function gencode(expr)
     if expr.type == "int" then
-        return tonumber(expr.value)
+        return quote
+            var x: int = [tonumber(expr.value)]
+        in
+            x
+        end
+    end
+
+    if expr.type == "float" then
+        return quote
+            var x: float = [tonumber(expr.value)]
+        in
+            x
+        end
     end
 
     if expr.type == "operator" then
         if expr.id == "=" then
-            assert(expr.first.type == "ident")
-            return quote
-                var name = expr.first.value
-                var val = [gencode(expr.second)]
-                Cae.set_var(name, Cae.make_int(val))
-            end
+            return assign(expr)
         elseif expr.second then
             local op = lookup_binop(expr.id)
             return op(gencode(expr.first), gencode(expr.second))
@@ -415,12 +437,7 @@ function gencode(expr)
 
     if expr.type == "var" then
         if expr.second then
-            assert(expr.first.type == "ident")
-            return quote
-                var name = expr.first.value
-                var val = [gencode(expr.second)]
-                Cae.set_var(name, Cae.make_int(val))
-            end
+            return assign(expr)
         end
         return nil
     end
@@ -428,16 +445,39 @@ function gencode(expr)
     if expr.type == "ident" then
         --print(expr.type)
         --print(expr.value)
-        return quote
+        local typ = (terra()
             var val: &Cae.value_t = Cae.get_var(expr.value)
-            var result: int
-            if val ~= nil then
-                result = Cae.take_int(val)
-            else
-                result = 0
+            if Cae.is_int(val) then
+                return 1
+            elseif Cae.is_float(val) then
+                return 2
             end
-        in
-            result
+        end)()
+        print(typ)
+        if typ == 1 then
+            return quote
+                var val: &Cae.value_t = Cae.get_var(expr.value)
+                var result: int
+                if val ~= nil then
+                    result = Cae.take_int(val)
+                else
+                    result = 0
+                end
+            in
+                result
+            end
+        elseif typ == 2 then
+            return quote
+                var val: &Cae.value_t = Cae.get_var(expr.value)
+                var result: float
+                if val ~= nil then
+                    result = Cae.take_float(val)
+                else
+                    result = 0
+                end
+            in
+                result
+            end
         end
     end
 

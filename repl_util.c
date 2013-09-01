@@ -30,6 +30,32 @@ int take_int(const value_t *v)
     return 0;
 }
 
+_Bool is_int(const value_t *v)
+{
+    if (v)
+        return strcmp(v->type, "int") == 0;
+    return 0;
+}
+
+value_t make_float(float v)
+{
+    return (value_t){ "float", (void *)*(long *)&v };
+}
+
+float take_float(const value_t *v)
+{
+    if (v)
+        return *(float *)&v->value;
+    return 0;
+}
+
+_Bool is_float(const value_t *v)
+{
+    if (v)
+        return strcmp(v->type, "float") == 0;
+    return 0;
+}
+
 void set_var(const char *name, const value_t v)
 {
     int top = lua_gettop(lua_state);

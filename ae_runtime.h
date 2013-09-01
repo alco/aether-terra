@@ -8,6 +8,11 @@ typedef struct {
 
 value_t make_int(int v);
 int take_int(const value_t *v);
+_Bool is_int(const value_t *v);
+
+value_t make_float(float v);
+float take_float(const value_t *v);
+_Bool is_float(const value_t *v);
 
 void set_var(const char *name, const value_t v);
 const value_t *get_var(const char *name);
