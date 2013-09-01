@@ -372,9 +372,9 @@ function doexpr(line)
         local code = terra()
             return [gencode(expr)]
         end
-        code:printpretty()
-        code:disas()
-        print("---")
+        --code:printpretty()
+        --code:disas()
+        --print("---")
         last_result = code() --ae_eval(expr)
     end
 
@@ -447,13 +447,15 @@ function gencode(expr)
         --print(expr.value)
         local typ = (terra()
             var val: &Cae.value_t = Cae.get_var(expr.value)
-            if Cae.is_int(val) then
+            if val == nil then
+                return 0
+            elseif Cae.is_int(val) then
                 return 1
             elseif Cae.is_float(val) then
                 return 2
             end
         end)()
-        print(typ)
+        --print(typ)
         if typ == 1 then
             return quote
                 var val: &Cae.value_t = Cae.get_var(expr.value)
@@ -483,6 +485,30 @@ function gencode(expr)
 
     if expr.id == "funcall" then
         assert(expr.name.type == "ident")
+        -- Bulitin functions go first
+        if expr.name.value == "pras" then
+            local code = terra()
+                return [gencode(expr.args[1])]
+            end
+            code:disas()
+            return 0
+        end
+        if expr.name.value == "prpr" then
+            local code = terra()
+                return [gencode(expr.args[1])]
+            end
+            code:printpretty()
+            return 0
+        end
+        if expr.name.value == "prall" then
+            local code = terra()
+                return [gencode(expr.args[1])]
+            end
+            code:printpretty()
+            code:disas()
+            return 0
+        end
+
         if Cmath[expr.name.value] then
             local args = terralib.newlist(expr.args)
             args = args:map(function(e)
