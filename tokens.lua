@@ -405,6 +405,19 @@ Cmath = terralib.includec("math.h")
 Cstd  = terralib.includec("stdlib.h")
 Cstr  = terralib.includec("string.h")
 
+terra ipow(a: int, n: int): int
+    if n == 0 then
+        return 1
+    elseif n == 1 then
+        return a
+    elseif (n and 1) == 0 then
+        var tmp = ipow(a, n >> 1)
+        return tmp * tmp
+    else
+        return a * ipow(a, n-1)
+    end
+end
+
 ae_env = {
     sin = {
         impls = {
@@ -445,6 +458,21 @@ ae_env = {
             },
             float = {
                 impl = terra(a: float, b: float) return a - b end,
+                valtype = "float",
+                sig = {"float", "float"}
+            }
+        },
+        nargs = 2
+    },
+    ["**"] = {
+        impls = {
+            int = {
+                impl = ipow,
+                valtype = "int",
+                sig = {"int", "int"}
+            },
+            float = {
+                impl = Cmath.powf,
                 valtype = "float",
                 sig = {"float", "float"}
             }
