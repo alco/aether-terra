@@ -614,4 +614,87 @@ symbol("fn").pretty_print = function(self)
     return "(fn "..head.." "..self.body:pretty_print()..")"
 end
 
+symbol("->")
+symbol("::").nud = function(self)
+    self.first = parse_type()
+    table_print(self.first)
+    return self
+end
+
+function parse_type()
+    -- a type is one of
+    --  * primitive type
+    --  * type -> type
+    local typexpr = parse_primitive_type()
+    if peekParseNode() and peekParseNode().id == "->" then
+        skip("->")
+        return { type = "fn", spec = { typexpr, parse_type() } }
+    end
+    return typexpr
+end
+
+function parse_primitive_type()
+    -- A primitive type is one of
+    --  * identifier
+    --  * type variable
+    --  * []type
+    --  * [number]type
+    --  * {type: type}   // map
+    --  * parenthesised list of types (tuple, function arglist)
+    local node = nextParseNode()
+    if node.id == "ident" then
+        if is_greek_letter(node.value) then
+            return { type = "typevar", spec = node.value }
+        else
+            return { type = "concrete type", spec = node.value }
+        end
+    elseif node.id == "[" then
+        return parse_array_type()
+    elseif node.id == "{" then
+        return parse_map_type()
+    elseif node.id == " (" then
+        return parse_list_of_types()
+    elseif node.id == "(" then
+        return parse_list_of_types()
+    end
+    error("Bad type spec")
+end
+
+function is_greek_letter(str)
+    return false
+end
+
+function parse_array_type()
+    -- []int     // dynamic array of ints / slice
+    -- [5]int    // static array of ints / vector
+    -- [4,5]int  // two-dimensional array of ints
+    -- [..2]int  // two-dimensional slice
+    -- [..3]int  // three-dimensional slice
+    -- [4][5]int // array of arrays
+    local node = nextParseNode()
+    assert(node.id == "]")
+    return { type = "array", size = "dynamic", elemtype = parse_type() }
+end
+
+function parse_map_type()
+    -- {key: value}                // map
+    -- {key1: {key2: value}}       // map of map
+    -- {key1: [5]value}            // map of arrays
+    local keytype = parse_type()
+    skip(":")
+    local valuetype = parse_type()
+    return { type = "map", keytype = keytype, valuetype = valuetype }
+end
+
+function parse_list_of_types()
+    local node = nextParseNode()
+    local args = {}
+    while node.id ~= ")" do
+        putBackNode(node)
+        table.insert(args, parse_type())
+        node = nextParseNode()
+    end
+    return { type = "arglist", args = args }
+end
+
 --table_print(symbol_table)
