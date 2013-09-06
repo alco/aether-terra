@@ -150,6 +150,7 @@ local function infix_r(op, precedence)
 end
 
 function pretty_print(sym)
+    --table_print(sym)
     if sym.first and sym.second then
         -- binary op
         return "("..sym.id.." "..pretty_print(sym.first).." ".. pretty_print(sym.second)..")"
@@ -415,15 +416,40 @@ infix(".", 50)
 -- TODO: tuples
 -- ⟨ ⟩
 
-symbol("(", 100)
+symbol("(", 1)
 symbol(")")
 
 -- Grouping expressions
 symbol("(").nud = function(self)
     -- self is discarded
-    local expr = expression()
-    skip(")")
-    return expr
+
+    local node = nextParseNode()
+    if node.id == ")" then
+        return {} -- should be empty tuple or error instead?
+    end
+    putBackNode(node)
+
+    local exprs = {expression()}
+    --print("Got expr")
+    --print(pretty_print(exprs[1]))
+
+    while true do
+::continue::
+        local node = nextParseNode()
+        if node.id == ";" then
+            goto continue
+        elseif node.id == ")" then
+            break
+        end
+
+        putBackNode(node)
+        local expr = expression()
+        table.insert(exprs, expr)
+
+        --print("Got expr")
+        --print(pretty_print(expr))
+    end
+    return { type="block", id="block", exprs=exprs }
 end
 
 -- Funcalls
