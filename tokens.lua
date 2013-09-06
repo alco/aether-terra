@@ -201,8 +201,8 @@ end
 function tokenize(str)
     local tokens = {}
     local pos = 1
-    local ops = {"--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
-    local terminals = {"'", "`", "::", "(", ")", "[", "]", "{", "}", ".", ";"}
+    local ops = {"²", "--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
+    local terminals = {"::", " (", "'", "`", "(", ")", "[", "]", "{", "}", ".", ";"}
     local whitespace = {" ", ",", "\t", "\n"}
     local tok
     local stat
@@ -367,6 +367,9 @@ function doexpr(line)
 
     local last_result = nil
     for _, expr in ipairs(exprs) do
+        -- >>> pretty-print <<<
+        print(pretty_print(expr))
+
         -- >>> typecheck <<<
         local typed_ast, action = typecheck(expr)
         if not typed_ast then

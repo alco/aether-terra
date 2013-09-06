@@ -74,6 +74,9 @@ local symbol_table = {
         lbp = 0,
         nud = function(self)
             return self
+        end,
+        pretty_print = function(self)
+            return self.value
         end
     },
 
@@ -83,6 +86,9 @@ local symbol_table = {
         lbp = 0,
         nud = function(self)
             return self
+        end,
+        pretty_print = function(self)
+            return self.value
         end
     },
 
@@ -91,6 +97,9 @@ local symbol_table = {
         lbp = 0,
         nud = function(self)
             return self
+        end,
+        pretty_print = function(self)
+            return self.value
         end
     },
 
@@ -129,6 +138,9 @@ local function prefix(op, precedence)
         self.first = expression(precedence)
         return self
     end
+    tab.pretty_print = function(self)
+        return "("..self.id.." "..self.first:pretty_print()..")"
+    end
 end
 
 local function infix(op, precedence)
@@ -138,6 +150,9 @@ local function infix(op, precedence)
         self.second = expression(precedence)
         return self
     end
+    tab.pretty_print = function(self)
+        return "("..self.id.." "..self.first:pretty_print().." "..self.second:pretty_print()..")"
+    end
 end
 
 local function infix_r(op, precedence)
@@ -146,6 +161,22 @@ local function infix_r(op, precedence)
         self.first = other
         self.second = expression(precedence-1)
         return self
+    end
+    tab.pretty_print = function(self)
+        return "("..self.id.." "..self.first:pretty_print().." "..self.second:pretty_print()..")"
+    end
+end
+
+local function make_square(op, precedence)
+    local tab = symbol(op, precedence)
+    tab.led = function(self, other)
+        self.id = "**"
+        self.first = other
+        self.second = { type="int", value="2", pretty_print = function(self) return "2" end }
+        return self
+    end
+    tab.pretty_print = function(self)
+        return "("..self.id.." "..self.first:pretty_print().." "..self.second:pretty_print()..")"
     end
 end
 
@@ -187,7 +218,7 @@ function pretty_print(sym)
         -- identifier or literal
         --print("bad symbol")
         --table_print(sym)
-        return sym.value
+        return sym:pretty_print()
     end
 end
 
@@ -402,13 +433,13 @@ infix("•", 20)
 -- Key-value pair
 infix(":", 25)
 
-infix_r("↑",  30)  -- exponentiation
-infix_r("**", 30)  -- exponentiation
-
 -- Unary ops
 --prefix("+", 40)
-prefix("-", 40)
+prefix("-", 30)
 
+infix_r("↑",  40)  -- exponentiation
+infix_r("**", 40)  -- exponentiation
+make_square("²", 40)   -- exponentiation
 
 -- Access
 infix(".", 50)
@@ -416,7 +447,6 @@ infix(".", 50)
 -- TODO: tuples
 -- ⟨ ⟩
 
-symbol("(", 1)
 symbol(")")
 
 -- Grouping expressions
@@ -434,12 +464,18 @@ symbol("(").nud = function(self)
     --print(pretty_print(exprs[1]))
 
     while true do
+        local at_least_one_semicolon = false
 ::continue::
         local node = nextParseNode()
         if node.id == ";" then
+            at_least_one_semicolon = true
             goto continue
         elseif node.id == ")" then
             break
+        end
+
+        if not at_least_one_semicolon then
+            error("semicolon expected")
         end
 
         putBackNode(node)
@@ -449,15 +485,33 @@ symbol("(").nud = function(self)
         --print("Got expr")
         --print(pretty_print(expr))
     end
-    return { type="block", id="block", exprs=exprs }
+    return {
+        type="block", id="block", exprs=exprs,
+        pretty_print = function(self)
+            local argstr = ""
+            for _, expr in ipairs(self.exprs) do
+                argstr = argstr .. " " .. expr:pretty_print()
+            end
+            return "(block"..argstr..")"
+        end
+    }
 end
+symbol(" (").nud = symbol("(").nud
 
 -- Funcalls
-symbol("(").led = function(self, left)
+symbol("(", 1).led = function(self, left)
     self.id = "funcall"
     self.name = left
     self.args = parse_expr_list_until(")")
     return self
+end
+
+symbol("(").pretty_print = function(self)
+    local argstr = ""
+    for _, expr in ipairs(self.args) do
+        argstr = argstr .. " " .. expr:pretty_print()
+    end
+    return "("..self.name:pretty_print()..argstr..")"
 end
 
 symbol("[", 101)
@@ -518,6 +572,26 @@ symbol("var").nud = function(self)
         error("Bad variable definition")
     end
     return self
+end
+
+-- Function literal
+symbol("fn").nud = function(self)
+    self.type = "fn"
+    local expr = expression()
+    --print(pretty_print(expr))
+    if expr.id ~= "funcall" then
+        error("Expected a function declaration")
+    end
+    self.head = expr
+    --if peekParseNode() and peekParseNode().id == "::" then
+        --self.sig = expression()
+    --end
+    self.body = expression()
+    return self
+end
+
+symbol("fn").pretty_print = function(self)
+    return "(fn "..self.head:pretty_print().." "..self.body:pretty_print()..")"
 end
 
 --table_print(symbol_table)
