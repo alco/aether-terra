@@ -577,21 +577,41 @@ end
 -- Function literal
 symbol("fn").nud = function(self)
     self.type = "fn"
-    local expr = expression()
-    --print(pretty_print(expr))
-    if expr.id ~= "funcall" then
-        error("Expected a function declaration")
+    local node = nextParseNode()
+    if node.id == "(" then
+        -- function literal
+        self.head = parse_expr_list_until(")")
+        self.body = expression()
+    else
+        -- function definition
+        putBackNode(node)
+
+        local expr = expression()
+        --print(pretty_print(expr))
+        if expr.id ~= "funcall" then
+            error("Expected a function declaration")
+        end
+        self.head = expr
+        --if peekParseNode() and peekParseNode().id == "::" then
+            --self.sig = expression()
+        --end
+        self.body = expression()
     end
-    self.head = expr
-    --if peekParseNode() and peekParseNode().id == "::" then
-        --self.sig = expression()
-    --end
-    self.body = expression()
     return self
 end
 
 symbol("fn").pretty_print = function(self)
-    return "(fn "..self.head:pretty_print().." "..self.body:pretty_print()..")"
+    local head
+    if self.head.id then
+        head = self.head:pretty_print()
+    else
+        head = "("
+        for _, arg in ipairs(self.head) do
+            head = head .. arg:pretty_print() .. " "
+        end
+        head = head .. ")"
+    end
+    return "(fn "..head.." "..self.body:pretty_print()..")"
 end
 
 --table_print(symbol_table)
