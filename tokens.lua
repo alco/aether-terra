@@ -368,7 +368,7 @@ function doexpr(line)
     local last_result = nil
     for _, expr in ipairs(exprs) do
         -- >>> typecheck <<<
-        local typed_ast = typecheck(expr)
+        local typed_ast, action = typecheck(expr)
         if not typed_ast then
             error("Typecheck failed for expr: "..pretty_print(expr))
         end
@@ -380,6 +380,19 @@ function doexpr(line)
         -- >>> evaluate <<<
         local code = terra()
             return [gencode(typed_ast)]
+        end
+
+        if action then
+            -- macro call
+            if action == "disas" then
+                code:disas()
+            elseif action == "pretty" then
+                code:printpretty()
+            elseif action == "all" then
+                code:printpretty()
+                code:disas()
+            end
+            break
         end
         --code:printpretty()
         --code:disas()
@@ -513,7 +526,10 @@ ae_env = {
             }
         },
         nargs = 2
-    }
+    },
+
+    -- Builtin macros
+    pras = "macro"
 }
 
 extract_var = {
@@ -559,8 +575,14 @@ function typecheck(expr)
                 value = expr.value
             }
         elseif ae_env[expr.value] then
+            local typ
+            if ae_env[expr.value] == "macro" then
+                typ = "ident_macro"
+            else
+                typ = "ident_fun"
+            end
             return {
-                type = "ident_fun",
+                type = typ,
                 --valtype = ae_env[expr.value].valtype,
                 --sig = ae_env[expr.value].sig,
                 value = expr.value
@@ -577,6 +599,18 @@ function typecheck(expr)
         --table_print(expr)
 
         local typed_fn = typecheck(expr.name)
+        if typed_fn.type == "ident_macro" then
+            --table_print(expr)
+            if expr.name.value == "pras" then
+                return typecheck(expr.args[1]), "disas"
+                --local code = terra()
+                    --return [gencode(expr.args[1])]
+                --end
+                --code:disas()
+                --return 0
+            end
+        end
+
         if typed_fn.type ~= "ident_fun" then
             error("Bad function in funcall: "..pretty_print(expr))
         end
