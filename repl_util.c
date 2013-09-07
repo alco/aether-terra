@@ -204,7 +204,7 @@ static void init_terra()
     lua_pushcfunction(L, readline_lua);
     lua_setfield(L, LUA_GLOBALSINDEX, "aether_readline");
 
-    assert(0 == terra_dofile(L, "tokens.lua"));
+    assert(0 == terra_dofile(L, "ae_repl.lua"));
 
     lua_state = L;
 }
