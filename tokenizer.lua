@@ -6,6 +6,7 @@
 -- import global dependencies
 local coroutine = _G.coroutine
 local error = _G.error
+local io = _G.io
 local ipairs = _G.ipairs
 --local print = _G.print
 local pcall = _G.pcall
