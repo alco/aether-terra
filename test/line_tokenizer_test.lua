@@ -12,8 +12,8 @@ end
 
 ---
 
-LineTokenizer = require("tokenizer")
-tt = LineTokenizer.new("initial 1st line")
+Tokenizer = require("tokenizer")
+tt = Tokenizer.new({ line = "initial 1st line", readline_fn = aether_readline })
 
 fixture_tokens = {
     { type = "ident", value = "initial" },
@@ -59,14 +59,14 @@ for i = 1, #fixture_tokens do
     assertEq(tok.type, fixture_tokens[i].type)
     assertEq(tok.value, fixture_tokens[i].value)
 
-    tt.skip(LineTokenizer.makeToken(tok.type, tok.value))
+    tt.skip(Tokenizer.makeToken(tok.type, tok.value))
 end
 assertNil(tt.peekToken())
 
 -- pull another fixture line
-status, errorstr = pcall(tt.skip, LineTokenizer.makeToken("operator", "-"))
+status, errorstr = pcall(tt.skip, Tokenizer.makeToken("operator", "-"))
 assertEq(status, false)
-assertEq(errorstr, "./tokenizer.lua:134: Unexpected token `operator : +`. Expected `operator : -`")
+assertEq(errorstr, "./tokenizer.lua:144: Unexpected token `operator : +`. Expected `operator : -`")
 
 tok = tt.peekToken()
 assertEq(tok.type, "int")
@@ -74,9 +74,9 @@ assertEq(tok.value, "1")
 
 status, errorstr = pcall(tt.skip)
 assertEq(status, false)
-assertEq(errorstr, "./tokenizer.lua:123: Expected end of line. Got `int : 1`")
+assertEq(errorstr, "./tokenizer.lua:133: Expected end of line. Got `int : 1`")
 
-tt.skip(LineTokenizer.makeToken("int", "1"))
+tt.skip(Tokenizer.makeToken("int", "1"))
 
 assertNil(tt.pullToken())
 assert(tt.atEOF())

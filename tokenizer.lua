@@ -1,5 +1,5 @@
 ---------------------------
--- *** LineTokenizer *** --
+-- *** Tokenizer *** --
 ---------------------------
 
 
@@ -10,7 +10,6 @@ local ipairs = _G.ipairs
 --local print = _G.print
 local pcall = _G.pcall
 local require = _G.require
-local aether_readline = _G.aether_readline
 
 -- Prevent modifications to global environment
 local package_env = {}
@@ -20,12 +19,11 @@ setfenv(1, package_env)
 Tokens = require("tokens")
 
 -- This will be turned into a coroutine continuosly yielding a stream of
--- tokens. Use for line-based input.
+-- tokens.
 --
 -- Dependendcies:
---  * "tokenize" function
---  * external function "aether_readline".
-function make_token_fn(line)
+--  * Tokens.tokenize()
+function make_token_fn(line, readline_fn)
     return function(async)
         while true do
             --print("tokenizing line")
@@ -41,7 +39,7 @@ function make_token_fn(line)
                 async = coroutine.yield(nil)
             end
 
-            line = aether_readline()
+            line = readline_fn()
             if line == nil then
                 -- EOF
                 return
@@ -51,14 +49,10 @@ function make_token_fn(line)
     end
 end
 
-function make_token_coro(line)
-    return coroutine.wrap(make_token_fn(line))
-end
-
 -- Returns two functions: one for synchronous token fetching and the other one
--- for asynchronous.
-function make_token_api(line)
-    local get_token_coro = make_token_coro(line)
+-- for asynchronous. The third return value is the underlying coroutine function.
+function make_token_api(make_tok_fn)
+    local get_token_coro = coroutine.wrap(make_tok_fn)
     local get_token_sync = function()
         return get_token_coro(false)
     end
@@ -68,12 +62,28 @@ function make_token_api(line)
     return get_token_sync, get_token_async, get_token_coro
 end
 
-function new(line)
-    local lookbehind_token
-    local current_token
-    local next_token
+function new(opts)
+    local first_line, readline_fn
+    if opts.line then
+        -- line tokenizer
+        if not opts.readline_fn then
+            error("Expected 'readline_fn' option with 'line'")
+        end
+        first_line, readline_fn = opts.line, opts.readline_fn
+    elseif opts.file then
+        -- file tokenizer
+        local lines = io.lines(opts.file)
+        first_line, readline_fn = lines(), function()
+            return lines()
+        end
+    else
+        error("One of 'line' or 'file' options expected")
+    end
 
-    local get_token_sync, get_token_async, _token_coro_fn = make_token_api(line)
+    local get_token_sync, get_token_async, _token_coro_fn
+            = make_token_api(make_token_fn(first_line, readline_fn))
+
+    local lookbehind_token, current_token, next_token
 
     local tokenizer = {}
 
