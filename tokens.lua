@@ -6,6 +6,10 @@
     --return { type = "atom", value = value }
 --end
 
+function makeToken(type, value)
+    return { type = type, value = value }
+end
+
 function makeLiteralInt(value)
     return { type = "int", value = value }
 end
@@ -32,6 +36,20 @@ end
 
 function makeNewline()
     return { type = "nl", value = "" }
+end
+
+function tokensEqual(t1, t2)
+    for k,v in pairs(t1) do
+        if v ~= t2[k] then
+            return false
+        end
+    end
+    for k,v in pairs(t2) do
+        if v ~= t1[k] then
+            return false
+        end
+    end
+    return true
 end
 
 -- "\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"
@@ -244,13 +262,17 @@ function tokenize(str)
     return tokens
 end
 
-function printoken(tok)
+function formatoken(tok)
     local str = tok.type
     if tok.value then
         str = str.." : "..tok.value
     end
+    return str
+end
+
+function printoken(tok)
     --table_print(tok)
-    print(str)
+    print(formatoken(tok))
 end
 
 function printokens(tokens)
@@ -260,7 +282,10 @@ function printokens(tokens)
 end
 
 return {
+    makeToken = makeToken,
+    tokensEqual = tokensEqual,
     tokenize = tokenize,
+    formatoken = formatoken,
     printoken = printoken,
     printokens = printokens
 }

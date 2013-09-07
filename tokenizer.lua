@@ -5,8 +5,10 @@
 
 -- import global dependencies
 local coroutine = _G.coroutine
+local error = _G.error
 local ipairs = _G.ipairs
 --local print = _G.print
+local pcall = _G.pcall
 local require = _G.require
 local aether_readline = _G.aether_readline
 
@@ -56,14 +58,14 @@ end
 -- Returns two functions: one for synchronous token fetching and the other one
 -- for asynchronous.
 function make_token_api(line)
-    local _get_token_coro = make_token_coro(line)
+    local get_token_coro = make_token_coro(line)
     local get_token_sync = function()
-        return _get_token_coro(false)
+        return get_token_coro(false)
     end
     local get_token_async = function()
-        return _get_token_coro(true)
+        return get_token_coro(true)
     end
-    return get_token_sync, get_token_async
+    return get_token_sync, get_token_async, get_token_coro
 end
 
 function new(line)
@@ -71,7 +73,7 @@ function new(line)
     local current_token
     local next_token
 
-    local get_token_sync, get_token_async = make_token_api(line)
+    local get_token_sync, get_token_async, _token_coro_fn = make_token_api(line)
 
     local tokenizer = {}
 
@@ -115,26 +117,27 @@ function new(line)
         lookbehind_token = nil
     end
 
-    function tokenizer.expect(typ)
+    function tokenizer.skip(typ)
         if not typ then
             if tokenizer.peekToken() then
-                error("Expected end of line. Got "..tokenizer.peekToken())
+                error("Expected end of line. Got `"..Tokens.formatoken(tokenizer.peekToken()).."`")
             end
+            next_token = nil
             return
         end
 
         local tok = tokenizer.pullToken()
         if not tok then
             error("Expected "..typ) --end of line") -- FIXME  (1 + 2 + \n 3
-        elseif tok ~= typ then
+        elseif not Tokens.tokensEqual(tok, typ) then
             --table_print(node)
-            error("Unexpected token '"..tok.."'. Expected "..typ)
+            error("Unexpected token `"..Tokens.formatoken(tok).."`. Expected `"..Tokens.formatoken(typ).."`")
         end
     end
 
-    function tokenizer.skip(typ)
-        tokenizer.expect(typ)
-        _next_parse_node = nil -- FIXME: Why is this needed?
+    function tokenizer.atEOF()
+        local status, errorstr = pcall(_token_coro_fn)
+        return status == false and errorstr == "cannot resume dead coroutine"
     end
 
     return tokenizer
@@ -142,7 +145,8 @@ end
 
 return {
     new = new,
-    tokenize = Tokens.tokenize,
-    printoken = Tokens.printoken,
-    printokens = Tokens.printokens
+    --tokenize = Tokens.tokenize,
+    --printoken = Tokens.printoken,
+    --printokens = Tokens.printokens,
+    makeToken = Tokens.makeToken
 }

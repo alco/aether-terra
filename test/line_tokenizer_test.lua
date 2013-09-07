@@ -59,24 +59,27 @@ for i = 1, #fixture_tokens do
     assertEq(tok.type, fixture_tokens[i].type)
     assertEq(tok.value, fixture_tokens[i].value)
 
-    tt.pullToken() -- FIXME: replace by skip?
+    tt.skip(LineTokenizer.makeToken(tok.type, tok.value))
 end
 assertNil(tt.peekToken())
 
 -- pull another fixture line
-tok = tt.pullToken()
--- FIXME: test expect()
-assertEq(tok.type, "operator")
-assertEq(tok.value, "+")
+status, errorstr = pcall(tt.skip, LineTokenizer.makeToken("operator", "-"))
+assertEq(status, false)
+assertEq(errorstr, "./tokenizer.lua:134: Unexpected token `operator : +`. Expected `operator : -`")
 
 tok = tt.peekToken()
 assertEq(tok.type, "int")
 assertEq(tok.value, "1")
 
--- FIXME: test skip()
-tt.pullToken()
+status, errorstr = pcall(tt.skip)
+assertEq(status, false)
+assertEq(errorstr, "./tokenizer.lua:123: Expected end of line. Got `int : 1`")
+
+tt.skip(LineTokenizer.makeToken("int", "1"))
 
 assertNil(tt.pullToken())
+assert(tt.atEOF())
 
 -- FIXME: test newline
 -- FIXME: test lookbehind
