@@ -1,2 +1,3 @@
 ai
-ai.dSYM/
+*.dSYM/
+test/line_tokenizer_test
