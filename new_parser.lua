@@ -133,6 +133,97 @@ function parser.expression(self, rbp)
     return left
 end
 
+function parser.statement(self, rbp)
+    rbp = rbp or 0
+
+    self:skip_optional_eol()
+
+    local node = self:pullNode()
+    --print("Calling nud on")
+    --table_print(node)
+    --print("---")
+    local left = node:nud()
+    while self:peekNode() and rbp < self:peekNode().lbp do
+        --print("beginloop")
+        node = self:pullNode()
+        --print("Calling led on")
+        --table_print(t)
+        --print("---")
+        left = node:led(left)
+        --print("endloop")
+    end
+    self:skip_eol()
+    return left
+end
+
+--
+
+function new_node(tok, id)
+    local node = {}
+    for k, v in pairs(node_table[id]) do
+        node[k] = v
+    end
+    node.tok = tok
+    --setmetatable(node, node_table[typ])
+    return node
+end
+
+function token_to_node(tok)
+    if node_table[tok.value] then
+        -- it's a keyword
+        return new_node(tok, tok.value)
+    elseif node_table[tok.type] then
+        return new_node(tok, tok.type)
+    end
+    error(tok.row..":"..tok.col..": Unrecognized token '"..tok.value.."'")
+end
+
+function map_token(tok)
+    local node
+    if tok then
+        node = token_to_node(tok)
+    end
+    if not node and tok then
+        error("Bad token '"..tok.type.."'")
+    end
+    return node
+end
+
+function parser.pullNode(self)
+    local tok = self.tokenizer.pullToken()
+    return map_token(tok)
+end
+
+function parser.peekNode(self)
+    local tok = self.tokenizer.peekToken()
+    return map_token(tok)
+end
+
+function parser.skip_optional_eol(self)
+    while true do
+        local tok = self.tokenizer.peekToken()
+        if not tok then
+            break
+        end
+        if tok.value == ";" or tok.value == "nl" then
+            self.tokenizer.skip(tok)
+        else
+            break
+        end
+    end
+end
+
+function parser.skip_eol(self)
+    local tok = self.tokenizer.peekToken()
+    if not tok then
+        return
+    end
+    if not (tok.value == ";" or tok.value == "nl") then
+        error(tok.row..":"..tok.col.." Expected newline or semicolon. Got '"..tok.value.."'")
+    end
+    self.tokenizer.skip(tok)
+end
+
 --
 -- Parse node definitions
 --
@@ -168,47 +259,8 @@ make_prefix("-", 30)
 make_infix_r("↑",  40)  -- exponentiation
 make_infix_r("**", 40)  -- exponentiation
 
---
-
-function new_node(tok, id)
-    local node = {}
-    for k, v in pairs(node_table[id]) do
-        node[k] = v
-    end
-    node.tok = tok
-    --setmetatable(node, node_table[typ])
-    return node
-end
-
-function token_to_node(tok)
-    if node_table[tok.value] then
-        -- it's a keyword
-        return new_node(tok, tok.value)
-    elseif node_table[tok.type] then
-        return new_node(tok, tok.type)
-    end
-    error("Unrecognized token '"..tok.type.."'")
-end
-
-function map_token(tok)
-    local node
-    if tok then
-        node = token_to_node(tok)
-    end
-    if not node and tok then
-        error("Bad token '"..tok.type.."'")
-    end
-    return node
-end
-
-function parser.pullNode(self)
-    local tok = self.tokenizer.pullToken()
-    return map_token(tok)
-end
-
-function parser.peekNode(self)
-    local tok = self.tokenizer.peekToken()
-    return map_token(tok)
-end
+-- Terminals
+make_node("nl")
+make_node(";")
 
 return parser

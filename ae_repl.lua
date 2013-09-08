@@ -17,7 +17,7 @@ function doexpr(line)
     local tt = Tokenizer.new({ line = line, readline_fn = aether_readline })
     parser.tokenizer = tt
 
-    local expr = parser:expression()
+    local expr = parser:statement()
 
     --local exprs = {}
 

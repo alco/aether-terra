@@ -35,7 +35,7 @@ function makeTerminal(typ)
 end
 
 function makeNewline()
-    return { type = "nl", value = "" }
+    return { type = "nl", value = "nl" }
 end
 
 function tokensEqual(t1, t2)
@@ -110,7 +110,7 @@ function parseNumber(str, pos)
     end
 end
 
-local ident_pat = "[_%w][_%w0-9]*"
+local ident_pat = "[_%w][_%w0-9'!?]*"
 function parseIdentifier(str, pos)
     pos = pos or 1
     local s, e = str:find(ident_pat, pos)
@@ -205,11 +205,14 @@ function tokenize(str)
     local pos = 1
     local ops = {"::", "²", "--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
     local terminals = {" (", "'", "`", "(", ")", "[", "]", "{", "}", ".", ";"}
-    local whitespace = {" ", ",", "\t", "\n"}
+    local whitespace = {" ", ",", "\t"}
+    local newline = "\n"
     local tok
     local stat
     local first
     local op
+    local linecount = 1
+    local column = 1
 
     local function match_tok(toks, str)
         for i, tok in ipairs(toks) do
@@ -227,25 +230,38 @@ function tokenize(str)
             op = str:sub(pos, pos+2)
             tok = makeOperator(op)
             pos = pos + 3
+            column = column + 3
         elseif pos <= str:len()-1 and match_tok(ops, str:sub(pos, pos+1)) then
             op = str:sub(pos, pos+1)
             tok = makeOperator(op)
             pos = pos + 2
+            column = column + 2
         elseif match_tok(ops, first) then
             tok = makeOperator(first)
             pos = pos + 1
+            column = column + 1
         --elseif first:match("\n") then
             --tok, pos = parseNewline(str, pos)
         elseif first == "\"" then
+            local oldpos = pos
             tok, pos = parseString(str, pos)
+            column = column + pos - oldpos - 1
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2
+            column = column + 2
         elseif match_tok(terminals, first) then
             tok = makeTerminal(first)
             pos = pos + 1
+            column = column + 1
+        elseif first == newline then
+            pos = pos + 1
+            linecount = linecount + 1
+            column = 1
+            tok = makeNewline()
         elseif match_tok(whitespace, first) then
             pos = pos + 1
+            column = column + 1
             tok = nil
         else
             stat, tok, pos = pcall(parseIdentifier, str, pos)
@@ -256,6 +272,8 @@ function tokenize(str)
         if tok then
             --print("got token")
             --table_print(tok)
+            tok.row = linecount
+            tok.col = column
             table.insert(tokens, tok)
         end
     end
