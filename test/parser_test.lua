@@ -25,6 +25,16 @@ function stat(line)
     return parser:statement():format()
 end
 
+function all_stats(line)
+    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
+    parser.tokenizer = tt
+    local list = {}
+    for _, s in ipairs(parser:all_statements()) do
+        table.insert(list, s:format())
+    end
+    return list
+end
+
 ---
 
 -- Basic literal tests
@@ -92,3 +102,24 @@ assertError("Unexpected 'gparen'. Expected 'ident'", stat, "var (a)")
 assertError("1:3 Expected newline or semicolon. Got '2'", stat, "var a 2")
 assertError("1:3 Expected newline or semicolon. Got 'var'", stat, "var a var")
 assertError("Trying to use 'var' in prefix position.", stat, "var a = var b")
+
+-- Newlines and semicolons
+assertEq(";", stat(";"))
+assertEq(";", stat(";;"))
+assertEq(";", stat(";1"))
+assertEq(";", stat("\n;"))
+
+assertEqList({";"}, all_stats(";"))
+assertEqList({";",";"}, all_stats(";;"))
+assertEqList({";","1"}, all_stats(";1"))
+assertEqList({";","1"}, all_stats(";1;"))
+assertEqList({";"}, all_stats("\n;"))
+assertEqList({";","1",";",";"}, all_stats("\n;1;;\n;"))
+assertEqList({"1",";"}, all_stats("1\n;"))
+assertEqList({"1"}, all_stats("1;"))
+--assertEqList({}, all_stats("\n"))
+--assertEqList({"1"}, all_stats("1;\n"))
+
+-- Assignment
+assertError("Unable to use '=' in expression", expr, "a = 1")
+assertEq("(= a 1)", stat("a = 1"))

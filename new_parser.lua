@@ -92,6 +92,7 @@ function make_default_node(id)
         id = id,
         lbp = 0,
         nud = id_fn,
+        snud = id_fn,
         led = err_led_fn
     }
     node_table[id] = node
@@ -182,10 +183,15 @@ function parser.statement(self, rbp)
 
     self:skip_optional_eol()
 
-    local node = self:pullNode()
-    if not node or node.id == ";" then
-        return node
+    local node = self:peekNode()
+    if not node then
+        return
     end
+    if node.id == ";" then
+        return self:pullNode()
+    end
+
+    self:pullNode()
     --print("Calling nud on")
     --table_print(node)
     --print("---")
@@ -196,7 +202,7 @@ function parser.statement(self, rbp)
         --print("Calling led on")
         --table_print(t)
         --print("---")
-        left = node:led(left)
+        left = node:sled(left)
         --print("endloop")
     end
     self:skip_eol()
@@ -450,7 +456,19 @@ make_node("cparen", 1).led = function(self, left)
 end
 
 -- Assignment
-make_node("=")
+make_node("=", 1).sled = function(self, left)
+    return {
+        id = "=",
+        name = left,
+        value = parser:expression(),
+        format = function(self)
+            return strformat("(= {1} {2})", self.name:format(), self.value:format())
+        end
+    }
+end
+make_node("=").led = function(self, left)
+    error("Unable to use '=' in expression")
+end
 
 -- Variable declaration
 make_node("var").snud = function(self)
@@ -460,15 +478,15 @@ make_node("var").snud = function(self)
     local node = parser:peekNode()
     if node and node.id == "=" then
         parser.tokenizer.skip("=")
-        pnode.expr = parser:expression()
+        pnode.value = parser:expression()
     end
     --error("Bad variable definition")
     pnode.format = function(self)
-        local expr = ""
-        if self.expr then
-            expr = " "..self.expr:format()
+        local value = ""
+        if self.value then
+            value = " "..self.value:format()
         end
-        return strformat("(var {1}{2})", self.name:format(), expr)
+        return strformat("(var {1}{2})", self.name:format(), value)
     end
     return pnode
 end
