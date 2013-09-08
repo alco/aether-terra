@@ -34,6 +34,14 @@ function makeTerminal(typ)
     return { type = "term", value = typ }
 end
 
+function makeGroupParen()
+    return { type = "term", value = "gparen" }
+end
+
+function makeCallParen(typ)
+    return { type = "term", value = "cparen" }
+end
+
 function makeNewline()
     return { type = "nl", value = "nl" }
 end
@@ -204,8 +212,8 @@ function tokenize(str)
     local tokens = {}
     local pos = 1
     local ops = {"::", "²", "--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
-    local terminals = {" (", "'", "`", "(", ")", "[", "]", "{", "}", ".", ";"}
-    local whitespace = {" ", ",", "\t"}
+    local terminals = {"'", "`", "(", ")", "[", "]", "{", "}", ".", ";"}
+    local whitespace = {" ", ",", "\t", "\n"}
     local newline = "\n"
     local tok
     local stat
@@ -246,6 +254,13 @@ function tokenize(str)
             local oldpos = pos
             tok, pos = parseString(str, pos)
             column = column + pos - oldpos - 1
+        elseif first == "(" then
+            if pos == 1 or (pos > 1 and match_tok(whitespace, str:sub(pos-1,pos-1))) then
+                tok = makeGroupParen()
+            else
+                tok = makeCallParen()
+            end
+            pos = pos + 1
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2

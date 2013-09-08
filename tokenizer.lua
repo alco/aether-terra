@@ -11,6 +11,7 @@ local ipairs = _G.ipairs
 --local print = _G.print
 local pcall = _G.pcall
 local require = _G.require
+local type = _G.type
 
 -- Prevent modifications to global environment
 local package_env = {}
@@ -139,7 +140,15 @@ function new(opts)
 
         local tok = tokenizer.pullToken()
         if not tok then
-            error("Expected "..typ) --end of line") -- FIXME  (1 + 2 + \n 3
+            if type(typ) == "string" then
+                error("Expected "..typ) --end of line") -- FIXME  (1 + 2 + \n 3
+            else
+                error("Expected "..Tokens.formatoken(typ)) --end of line") -- FIXME  (1 + 2 + \n 3
+            end
+        elseif type(typ) == "string" then
+            if tok.value ~= typ then
+                error("Unexpected token `"..Tokens.formatoken(tok).."`. Expected `"..typ.."`")
+            end
         elseif not Tokens.tokensEqual(tok, typ) then
             --table_print(node)
             error("Unexpected token `"..Tokens.formatoken(tok).."`. Expected `"..Tokens.formatoken(typ).."`")

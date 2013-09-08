@@ -141,8 +141,8 @@ function parser.statement(self, rbp)
     self:skip_optional_eol()
 
     local node = self:pullNode()
-    if not node then
-        return
+    if not node or node.id == ";" then
+        return node
     end
     --print("Calling nud on")
     --table_print(node)
@@ -210,6 +210,9 @@ end
 
 function parser.pullNode(self)
     local tok = self.tokenizer.pullToken()
+    if not tok then
+        error("Unexpected end of input")
+    end
     return map_token(tok)
 end
 
@@ -224,7 +227,7 @@ function parser.skip_optional_eol(self)
         if not tok then
             break
         end
-        if tok.value == ";" or tok.value == "nl" then
+        if tok.value == "nl" then
             self.tokenizer.skip(tok)
         else
             break
@@ -250,8 +253,6 @@ end
 for _, n in ipairs({"int", "float", "ident", "string"}) do
     make_default_node(n)
 end
-
-make_infix("=", 1)
 
 -- Comparisons
 make_infix("==", 9)
@@ -280,6 +281,196 @@ make_infix_r("**", 40)  -- exponentiation
 
 -- Terminals
 make_node("nl")
-make_node(";")
+make_node(";").format = function(self)
+    return ";"
+end
+
+
+local null_node = make_node("null")
+null_node.format = function(self) return "null" end
+
+make_node(")")
+
+-- Grouping expressions
+make_node("gparen").nud = function(self)
+    parser:skip_optional_eol()
+
+    local node = parser:pullNode()
+    if node.id == ")" then
+        return null_node -- should be empty tuple or error instead?
+    end
+    parser.tokenizer.pushToken()
+
+    local expr = parser:expression() -- FIXME: need ot be statement
+    parser:skip_optional_eol()
+    parser.tokenizer.skip(")")
+    return expr
+
+    --local exprs = {expression()}
+    ----print("Got expr")
+    ----print(pretty_print(exprs[1]))
+
+    --while true do
+        --local at_least_one_semicolon = false
+--::continue::
+        --local node = nextParseNode()
+        --if node.id == ";" then
+            --at_least_one_semicolon = true
+            --goto continue
+        --elseif node.id == ")" then
+            --break
+        --end
+
+        --if not at_least_one_semicolon then
+            --error("semicolon expected")
+        --end
+
+        --putBackNode(node)
+        --local expr = expression()
+        --table.insert(exprs, expr)
+
+        ----print("Got expr")
+        ----print(pretty_print(expr))
+    --end
+    --return {
+        --type="block", id="block", exprs=exprs,
+        --pretty_print = function(self)
+            --local argstr = ""
+            --for _, expr in ipairs(self.exprs) do
+                --argstr = argstr .. " " .. expr:pretty_print()
+            --end
+            --return "(block"..argstr..")"
+        --end
+    --}
+end
+make_node("cparen").nud = make_node("gparen").nud
+
+-- Funcalls
+make_node("cparen", 1).led = function(self, left)
+    local pnode = {
+        id = "funcall",
+        name = left,
+        args = {parser:expression()}, --parse_expr_list_until(")")
+        format = function(self)
+            local argstr = ""
+            for _, expr in ipairs(self.args) do
+                argstr = argstr.." "..expr:format()
+            end
+            return "(funcall "..self.name:format()..argstr..")"
+        end
+    }
+    parser.tokenizer.skip(")")
+    return pnode
+end
+
+-- Assignment
+-- FIXME: turn it into statement
+make_infix("=", 1)
+
+-- Variable declaration
+make_node("var").nud = function(self)
+    local pnode = {}
+    local expr = parser:expression()  -- FIXME: prevent `var (123; a = 1)`
+    if expr.id == "ident" then
+        pnode.first = expr
+    elseif expr.id == "=" then
+        pnode.first = expr.first
+        pnode.second = expr.second
+    else
+        error("Bad variable definition")
+    end
+    pnode.format = function(self)
+        local str = "(var "..self.first:format()
+        if self.second then
+            str = str.." "..self.second:format()
+        end
+        str = str..")"
+        return str
+    end
+    return pnode
+end
+
+-- Conditional
+make_node("if").nud = function(self)
+    local pnode = {
+        id = "if",
+        cond = parser:expression(),
+        thenclause = parser:expression()
+    }
+    if parser.tokenizer.peekToken() and parser.tokenizer.peekToken().value == "else" then
+        parser.tokenizer.skip("else")
+        pnode.elseclause = parser:expression()
+    end
+    pnode.format = function(self)
+        local str = "(if "..self.cond:format().." "..self.thenclause:format()
+        if self.elseclause then
+            str = str.." "..self.elseclause:format()
+        end
+        str = str..")"
+        return str
+    end
+    return pnode
+end
+
+-- Function literal
+make_node("fn").nud = function(self)
+    local pnode = {
+        id = "fn"
+    }
+
+    local node = parser:pullNode()
+    if node.id == "cparen" then
+        -- function literal
+        pnode.args = {parser:expression()} --parse_expr_list_until(")")
+        parser.tokenizer.skip(")")
+        pnode.body = parser:expression()
+    elseif node.id == "ident" then
+        ---- function definition
+        --putBackNode(node)
+
+        --local expr = expression()
+        ----print(pretty_print(expr))
+        --if expr.id ~= "funcall" then
+            --error("Expected a function declaration")
+        --end
+        --self.head = expr
+        ----if peekParseNode() and peekParseNode().id == "::" then
+            ----self.sig = expression()
+        ----end
+        --self.body = expression()
+    else
+        error("Bad function definition")
+    end
+    pnode.format = function(self)
+        local head
+        if self.head then
+            head = self.head:format()
+        end
+        local args
+        if self.args then
+            args = "("
+            for i, arg in ipairs(self.args) do
+                args = args..arg:format()
+                if i < #self.args then
+                    args = args.." "
+                end
+            end
+            args = args..")"
+        end
+        local str = "(fn"
+        if head then
+            str = str.." "..head
+        end
+        if args then
+            str = str.." "..args
+        end
+        if self.body then
+            str = str.." "..self.body:format()
+        end
+        str = str..")"
+        return str
+    end
+    return pnode
+end
 
 return parser
