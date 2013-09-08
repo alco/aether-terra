@@ -110,7 +110,7 @@ function parseNumber(str, pos)
     end
 end
 
-local ident_pat = "[_%w][_%w0-9'!?]*"
+local ident_pat = "[_%w][_%w0-9]*['?!]?"
 function parseIdentifier(str, pos)
     pos = pos or 1
     local s, e = str:find(ident_pat, pos)
