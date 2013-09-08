@@ -10,11 +10,6 @@ function expr(line)
     local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
     parser.tokenizer = tt
     return parser:expression():format()
-    --local stats = parser:all_statements()
-    --for i, s in ipairs(stats) do
-        --stats[i] = s:format()
-    --end
-    --return stats
 end
 
 function expr_list(line)
@@ -22,6 +17,12 @@ function expr_list(line)
     parser.tokenizer = tt
     tt.skip("gparen")
     return parser:expr_list_until(")"):format()
+end
+
+function stat(line)
+    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
+    parser.tokenizer = tt
+    return parser:statement():format()
 end
 
 ---
@@ -81,4 +82,13 @@ assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1), b, 2((c)), 3
 assertEq("((- a) 1 (- b) (* 2 c) (- 3))", expr_list("(-a, 1, -b, 2* c, -3)"))
 assertError("Trying to use ',' in prefix position.", expr_list, "(a 1, b 2)")
 
--- Statement list
+-- Block (list of statements)
+
+-- Statements
+assertEq("(var a)", stat("var a"))
+assertEq("(var a (+ 1 2))", stat("var a = 1 + 2"))
+assertError("Unexpected 'int'. Expected 'ident'", stat, "var 1")
+assertError("Unexpected 'gparen'. Expected 'ident'", stat, "var (a)")
+assertError("1:3 Expected newline or semicolon. Got '2'", stat, "var a 2")
+assertError("1:3 Expected newline or semicolon. Got 'var'", stat, "var a var")
+assertError("Trying to use 'var' in prefix position.", stat, "var a = var b")

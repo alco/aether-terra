@@ -189,7 +189,7 @@ function parser.statement(self, rbp)
     --print("Calling nud on")
     --table_print(node)
     --print("---")
-    local left = node:nud()
+    local left = node:snud()
     while self:peekNode() and rbp < self:peekNode().lbp do
         --print("beginloop")
         node = self:pullNode()
@@ -261,6 +261,14 @@ end
 function parser.peekNode(self)
     local tok = self.tokenizer.peekToken()
     return map_token(tok)
+end
+
+function parser.advance(self, id)
+    local node = self:pullNode()
+    if node.id ~= id then
+        error("Unexpected '"..node.id.."'. Expected '"..id.."'")
+    end
+    return node
 end
 
 function parser.skip_optional_eol(self)
@@ -442,27 +450,25 @@ make_node("cparen", 1).led = function(self, left)
 end
 
 -- Assignment
--- FIXME: turn it into statement
-make_infix("=", 1)
+make_node("=")
 
 -- Variable declaration
 make_node("var").snud = function(self)
     local pnode = {}
-    local expr = parser:expression()  -- FIXME: prevent `var (123; a = 1)`
-    if expr.id == "ident" then
-        pnode.first = expr
-    elseif expr.id == "=" then
-        pnode.first = expr.first
-        pnode.second = expr.second
-    else
-        error("Bad variable definition")
+    pnode.name = parser:advance("ident"):nud()
+
+    local node = parser:peekNode()
+    if node and node.id == "=" then
+        parser.tokenizer.skip("=")
+        pnode.expr = parser:expression()
     end
+    --error("Bad variable definition")
     pnode.format = function(self)
-        local second = ""
-        if self.second then
-            second = " "..self.second:format()
+        local expr = ""
+        if self.expr then
+            expr = " "..self.expr:format()
         end
-        return strformat("(var {1}{2})", self.first:format(), second)
+        return strformat("(var {1}{2})", self.name:format(), expr)
     end
     return pnode
 end
