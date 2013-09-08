@@ -1,16 +1,4 @@
-function assertEq(given, expected)
-    if given ~= expected then
-        error("Assertion failed. Expected `"..given.."` to be equal to `"..expected.."`")
-    end
-end
-
-function assertNil(given)
-    if given ~= nil then
-        error("Assertion failed. Expected `"..given.."` to be nil")
-    end
-end
-
----
+require("lunit")
 
 Tokenizer = require("tokenizer")
 tt = Tokenizer.new(g_tokenizerParams)
@@ -47,7 +35,7 @@ assertEq(tok.value, "-")
 fixture_tokens = {
     { type = "ident", value = "x" },
     { type = "operator", value = "**" },
-    { type = "term", value = "(" },
+    { type = "term", value = "cparen" },
     { type = "int", value = "4" },
     { type = "operator", value = "-" },
     { type = "float", value = "2." },
@@ -66,7 +54,7 @@ assertNil(tt.peekToken())
 -- pull another fixture line
 status, errorstr = pcall(tt.skip, Tokenizer.makeToken("operator", "-"))
 assertEq(status, false)
-assertEq(errorstr, "./tokenizer.lua:145: Unexpected token `operator : +`. Expected `operator : -`")
+assertEq(errorstr, "./tokenizer.lua:154: Unexpected token `operator : +`. Expected `operator : -`")
 
 tok = tt.peekToken()
 assertEq(tok.type, "int")
@@ -74,7 +62,7 @@ assertEq(tok.value, "1")
 
 status, errorstr = pcall(tt.skip)
 assertEq(status, false)
-assertEq(errorstr, "./tokenizer.lua:134: Expected end of line. Got `int : 1`")
+assertEq(errorstr, "./tokenizer.lua:135: Expected end of line. Got `int : 1`")
 
 tt.skip(Tokenizer.makeToken("int", "1"))
 

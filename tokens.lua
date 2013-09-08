@@ -47,17 +47,7 @@ function makeNewline()
 end
 
 function tokensEqual(t1, t2)
-    for k,v in pairs(t1) do
-        if v ~= t2[k] then
-            return false
-        end
-    end
-    for k,v in pairs(t2) do
-        if v ~= t1[k] then
-            return false
-        end
-    end
-    return true
+    return t1.type == t2.type and t1.value == t2.value
 end
 
 -- "\d+(.\d*)?([eE][-+]\d+)?([a-zA-Z]\w*)?"

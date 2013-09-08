@@ -255,8 +255,8 @@ for _, n in ipairs({"int", "float", "ident", "string"}) do
 end
 
 -- Comparisons
-make_infix("==", 9)
-make_infix("≠",  9)
+make_infix("==", 8)
+make_infix("≠",  8)
 make_infix("<",  9)
 make_infix("≤",  9)
 make_infix(">",  9)
@@ -270,7 +270,7 @@ make_infix("/", 20)
 make_infix("•", 20)
 
 -- Key-value pair
-make_infix(":", 25)
+--make_infix(":", 25)
 
 -- Unary ops
 make_prefix("-", 30)
