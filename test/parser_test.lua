@@ -3,11 +3,11 @@ require("lunit")
 local parser = require("new_parser")
 local Tokenizer = require("tokenizer")
 
-function aether_readline()
+function nilfn()
 end
 
 function expr(line)
-    local tt = Tokenizer.new({ line = line, readline_fn = aether_readline })
+    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
     parser.tokenizer = tt
     return parser:expression():format()
     --local stats = parser:all_statements()
@@ -15,6 +15,13 @@ function expr(line)
         --stats[i] = s:format()
     --end
     --return stats
+end
+
+function expr_list(line)
+    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
+    parser.tokenizer = tt
+    tt.skip("gparen")
+    return parser:expr_list_until(")"):format()
 end
 
 ---
@@ -57,3 +64,21 @@ assertEq("(- (* (+ 1 2) (+ 3 4)) (* 5 (/ 7 (- 8 1))))",
          expr("(1 + 2) * (3 + 4) - 5*(7/(8-1))"))
 assertEq("(- (** (/ 1 (- 2)) (- (• 3 (- 4)))))",
          expr("-(1/-2)**(-(3•-4))"))
+
+-- Non-expressions
+assertError("Trying to use 'var' in prefix position.",
+            expr, "var a")
+assertError("Trying to use 'var' in prefix position.",
+            expr, "var a = 1")
+
+-- Expression list
+assertEq("(a 1 b 2 c 3)", expr_list("(a (1) b 2 ((c)) 3)"))
+assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1) b 2((c)) 3)"))
+assertEq("((- a) (- 1 b) (- (* 2 c) 3))", expr_list("(-a 1 -b 2* c -3)"))
+
+assertEq("(a 1 b 2 c 3)", expr_list("(a, (1), b, 2, ((c)), 3)"))
+assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1), b, 2((c)), 3)"))
+assertEq("((- a) 1 (- b) (* 2 c) (- 3))", expr_list("(-a, 1, -b, 2* c, -3)"))
+assertError("Trying to use ',' in prefix position.", expr_list, "(a 1, b 2)")
+
+-- Statement list

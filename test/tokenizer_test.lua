@@ -54,7 +54,7 @@ assertNil(tt.peekToken())
 -- pull another fixture line
 status, errorstr = pcall(tt.skip, Tokenizer.makeToken("operator", "-"))
 assertEq(status, false)
-assertEq(errorstr, "./tokenizer.lua:154: Unexpected token `operator : +`. Expected `operator : -`")
+assertEq(errorstr, "Unexpected token `operator : +`. Expected `operator : -`")
 
 tok = tt.peekToken()
 assertEq(tok.type, "int")
@@ -62,7 +62,7 @@ assertEq(tok.value, "1")
 
 status, errorstr = pcall(tt.skip)
 assertEq(status, false)
-assertEq(errorstr, "./tokenizer.lua:135: Expected end of line. Got `int : 1`")
+assertEq(errorstr, "Expected end of line. Got `int : 1`")
 
 tt.skip(Tokenizer.makeToken("int", "1"))
 

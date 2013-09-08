@@ -5,7 +5,7 @@
 
 -- import global dependencies
 local coroutine = _G.coroutine
-local error = _G.error
+local gerror = _G.error
 local io = _G.io
 local ipairs = _G.ipairs
 --local print = _G.print
@@ -16,6 +16,11 @@ local type = _G.type
 -- Prevent modifications to global environment
 local package_env = {}
 setfenv(1, package_env)
+
+
+function error(str)
+    gerror(str, 0)
+end
 
 
 Tokens = require("tokens")

@@ -5,11 +5,12 @@
 -- import global dependencies
 --local coroutine = _G.coroutine
 local assert = _G.assert
-local error = _G.error
+local gerror = _G.error
 --local io = _G.io
 local ipairs = _G.ipairs
 local max = _G.math.max
 local pairs = _G.pairs
+local select = _G.select
 local table = _G.table
 --local print = _G.print
 --local pcall = _G.pcall
@@ -19,6 +20,47 @@ local table = _G.table
 local package_env = {}
 setfenv(1, package_env)
 
+
+--
+-- Utility functions
+function error(str)
+    gerror(str, 0)
+end
+
+function table.pack(...)
+  return { n = select("#", ...), ... }
+end
+
+function map_format(list)
+    local new_list = {}
+    for _, v in ipairs(list) do
+        table.insert(new_list, v:format())
+    end
+    return new_list
+end
+
+function strjoin(list, sep)
+    sep = sep or " "
+
+    local str = ""
+    for i, v in ipairs(list) do
+        str = str..v
+        if i < #list then
+            str = str..sep
+        end
+    end
+    return str
+end
+
+function strformat(fmt, ...)
+    local str = fmt
+    local args = table.pack(...)
+    for i = 1, args.n do
+        str = str:gsub("{"..i.."}", args[i])
+    end
+    return str
+end
+--
 
 val_fn = function(self)
     return self.value
@@ -81,7 +123,7 @@ function make_prefix(op, precedence)
             id = self.id,
             first = parser:expression(precedence),
             format = function(self)
-                return "("..self.id.." "..self.first:format()..")"
+                return strformat("({1} {2})", self.id, self.first:format())
             end
         }
         return pnode
@@ -97,7 +139,7 @@ function _make_infix_common(op, precedence, new_pred)
             first = other,
             second = parser:expression(new_pred),
             format = function(self)
-                return "("..self.id.." "..self.first:format().." "..self.second:format()..")"
+                return strformat("({1} {2} {3})", self.id, self.first:format(), self.second:format())
             end
         }
         return pnode
@@ -246,6 +288,45 @@ function parser.skip_eol(self)
     self.tokenizer.skip(tok)
 end
 
+function parser.expr_list_until(self, term)
+    local node = self:pullNode()
+    if node.id == term then
+        return {}
+    else
+        self.tokenizer.pushToken()
+    end
+
+    local exprs = {}
+    table.insert(exprs, self:expression())
+
+    local parsing_commas = false
+    node = self:pullNode()
+    if node.id == "," then
+        parsing_commas = true
+    end
+    self.tokenizer.pushToken()
+
+    while true do
+        node = self:pullNode()
+        if node.id == term then
+            break
+        elseif parsing_commas and node.id == "," then
+            -- simply skipping the comma
+        else
+            self.tokenizer.pushToken()
+        end
+        table.insert(exprs, self:expression())
+    end
+
+    return {
+        id = "exprlist",
+        exprs = exprs,
+        format = function(self)
+            return strformat("({1})", strjoin(map_format(self.exprs)))
+        end
+    }
+end
+
 --
 -- Parse node definitions
 --
@@ -284,6 +365,7 @@ make_node("nl")
 make_node(";").format = function(self)
     return ";"
 end
+make_node(",")
 
 
 local null_node = make_node("null")
@@ -352,11 +434,7 @@ make_node("cparen", 1).led = function(self, left)
         name = left,
         args = {parser:expression()}, --parse_expr_list_until(")")
         format = function(self)
-            local argstr = ""
-            for _, expr in ipairs(self.args) do
-                argstr = argstr.." "..expr:format()
-            end
-            return "(funcall "..self.name:format()..argstr..")"
+            return strformat("(funcall {1} ({2}))", self.name:format(), strjoin(map_format(self.args)))
         end
     }
     parser.tokenizer.skip(")")
@@ -368,7 +446,7 @@ end
 make_infix("=", 1)
 
 -- Variable declaration
-make_node("var").nud = function(self)
+make_node("var").snud = function(self)
     local pnode = {}
     local expr = parser:expression()  -- FIXME: prevent `var (123; a = 1)`
     if expr.id == "ident" then
@@ -380,12 +458,11 @@ make_node("var").nud = function(self)
         error("Bad variable definition")
     end
     pnode.format = function(self)
-        local str = "(var "..self.first:format()
+        local second = ""
         if self.second then
-            str = str.." "..self.second:format()
+            second = " "..self.second:format()
         end
-        str = str..")"
-        return str
+        return strformat("(var {1}{2})", self.first:format(), second)
     end
     return pnode
 end
@@ -402,12 +479,11 @@ make_node("if").nud = function(self)
         pnode.elseclause = parser:expression()
     end
     pnode.format = function(self)
-        local str = "(if "..self.cond:format().." "..self.thenclause:format()
+        local elseclause = ""
         if self.elseclause then
-            str = str.." "..self.elseclause:format()
+            elseclause = " "..self.elseclause:format()
         end
-        str = str..")"
-        return str
+        return strformat("(if {1} {2}{3})", self.cond:format(), self.thenclause:format(), elseclause)
     end
     return pnode
 end
@@ -442,33 +518,22 @@ make_node("fn").nud = function(self)
         error("Bad function definition")
     end
     pnode.format = function(self)
-        local head
+        local head = ""
         if self.head then
-            head = self.head:format()
+            head = " "..self.head:format()
         end
-        local args
+
+        local args = ""
         if self.args then
-            args = "("
-            for i, arg in ipairs(self.args) do
-                args = args..arg:format()
-                if i < #self.args then
-                    args = args.." "
-                end
-            end
-            args = args..")"
+            args = " "..strformat("({1})", strjoin(map_format(self.args)))
         end
-        local str = "(fn"
-        if head then
-            str = str.." "..head
-        end
-        if args then
-            str = str.." "..args
-        end
+
+        local body = ""
         if self.body then
-            str = str.." "..self.body:format()
+            body = " "..self.body:format()
         end
-        str = str..")"
-        return str
+
+        return strformat("(fn {1}{2}{3})", head, args, body)
     end
     return pnode
 end

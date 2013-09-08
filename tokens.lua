@@ -202,8 +202,8 @@ function tokenize(str)
     local tokens = {}
     local pos = 1
     local ops = {"::", "²", "--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
-    local terminals = {"'", "`", "(", ")", "[", "]", "{", "}", ".", ";"}
-    local whitespace = {" ", ",", "\t", "\n"}
+    local terminals = {"'", "`", "(", ")", "[", "]", "{", "}", ".", ";", ","}
+    local whitespace = {" ", "\t", "\n"}
     local newline = "\n"
     local tok
     local stat
