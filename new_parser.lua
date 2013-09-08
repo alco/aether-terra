@@ -4,11 +4,13 @@
 
 -- import global dependencies
 --local coroutine = _G.coroutine
+local assert = _G.assert
 local error = _G.error
 --local io = _G.io
 local ipairs = _G.ipairs
 local max = _G.math.max
 local pairs = _G.pairs
+local table = _G.table
 --local print = _G.print
 --local pcall = _G.pcall
 --local require = _G.require
@@ -139,6 +141,9 @@ function parser.statement(self, rbp)
     self:skip_optional_eol()
 
     local node = self:pullNode()
+    if not node then
+        return
+    end
     --print("Calling nud on")
     --table_print(node)
     --print("---")
@@ -154,6 +159,20 @@ function parser.statement(self, rbp)
     end
     self:skip_eol()
     return left
+end
+
+function parser.all_statements(self, rbp)
+    local list = {}
+    while self.tokenizer.peekToken() do
+        local stat = self:statement(rbp)
+        if stat then
+            table.insert(list, stat)
+        else
+            assert(self.tokenizer.atEOF())
+            break
+        end
+    end
+    return list
 end
 
 --

@@ -17,7 +17,7 @@ function doexpr(line)
     local tt = Tokenizer.new({ line = line, readline_fn = aether_readline })
     parser.tokenizer = tt
 
-    local expr = parser:statement()
+    local exprs = parser:all_statements()
 
     --local exprs = {}
 
@@ -43,7 +43,6 @@ function doexpr(line)
     ----print("Result node:")
     ----table_print(exprs)
 
-    local exprs = {expr}
     local last_result = nil
     for _, expr in ipairs(exprs) do
         -- >>> pretty-print <<<
