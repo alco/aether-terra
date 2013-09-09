@@ -11,11 +11,13 @@ function assertNil(given)
 end
 
 function assertEqList(given, expected)
+    local cnt = 1
     for i = 1, #given do
         assertEq(given[i], expected[i])
+        cnt = cnt + 1
     end
     if #expected ~= #given then
-        error("Not all values were checked")
+        error("Not all values were checked. Stop at '"..tostring(expected[cnt]).."'")
     end
 end
 

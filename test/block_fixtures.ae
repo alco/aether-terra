@@ -1,0 +1,16 @@
+(
+    var a = 1
+    var b = a * 2
+    b - a
+)
+
+some_func(a b c 1 2)
+other_func(a+b, 2*b, "c")
+
+a = if this_is_true (
+    true(value)
+) else (
+    false()
+)
+
+if (a ≤ b) 4 * 5 else -4

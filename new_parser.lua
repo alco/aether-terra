@@ -74,6 +74,12 @@ end
 err_led_fn = function(self, left)
     error("Trying to use '"..self.id.."' in infix position after '"..left.id.."'.")
 end
+err_snud_fn = function(self)
+    error("Trying to use '"..self.id.."' in statement position.")
+end
+err_sled_fn = function(self, left)
+    error("Trying to use '"..self.id.."' in statement position after '"..left.id.."'.")
+end
 
 
 node_table = {
@@ -110,7 +116,9 @@ function make_node(id, precedence)
             id = id,
             lbp = precedence,
             nud = err_nud_fn,
-            led = err_led_fn
+            led = err_led_fn,
+            snud = err_snud_fn,
+            sled = err_sled_fn
         }
         node_table[id] = node
     end
@@ -219,7 +227,9 @@ end
 
 function parser.all_statements(self, rbp)
     local list = {}
-    while self.tokenizer.peekToken() do
+    while self.tokenizer.pullToken() do
+        self.tokenizer.pushToken()
+
         local stat = self:statement(rbp)
         if stat then
             table.insert(list, stat)
@@ -554,14 +564,14 @@ make_node("cparen", 1).led = function(self, left)
     local pnode = {
         id = "funcall",
         name = left,
-        args = {parser:expression()}, --parse_expr_list_until(")")
+        args = parser:expr_list_until(")"),
         format = function(self)
-            return strformat("(funcall {1} ({2}))", self.name:format(), strjoin(map_format(self.args)))
+            return strformat("(funcall {1} {2})", self.name:format(), self.args:format())
         end
     }
-    parser:skip(")")
     return pnode
 end
+make_node("cparen").sled = make_node("cparen").led
 
 -- Assignment
 make_node("=", 1).sled = function(self, left)
@@ -623,6 +633,7 @@ make_node("if").nud = function(self)
     end
     return pnode
 end
+make_node("if").snud = make_node("if").nud
 
 -- Function literal
 make_node("fn").nud = function(self)

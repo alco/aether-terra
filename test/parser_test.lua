@@ -98,6 +98,12 @@ assertError("Trying to use 'var' in prefix position.",
 assertError("Trying to use 'var' in prefix position.",
             expr, "var a = 1")
 
+-- Funcalls
+assertEq("(funcall a ())", expr("a()"))
+assertEq("(funcall a (1))", expr("a(1)"))
+assertEq("(funcall a (1 2 3))", expr("a(1 2 3)"))
+assertEq("(funcall a ((+ 1 2) (* 2 3) 4))", expr("a(1+2, 2*3, 4)"))
+
 -- Expression list
 assertEq("(a 1 b 2 \"c\" 3)", expr_list("(a 1 b 2 \"c\" 3)"))
 assertEq("(a 1 b 2 \"c\" 3)", expr_list("(\na\n \n1 \nb \n2 \n\"c\" \n3\n)"))
