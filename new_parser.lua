@@ -208,7 +208,12 @@ function parser.statement(self, rbp)
         left = node:sled(left)
         --print("endloop")
     end
-    self:skip_eol()
+
+    local terminator = self:skip_eol()
+    if terminator == ";" then
+        left.isstatement = true
+    end
+
     return left
 end
 
@@ -288,6 +293,14 @@ function parser.peekAndSkip(self, value)
     end
 end
 
+function parser.pullAndSkip(self, value)
+    local node = self:pullNode()
+    if node and node.id == value then
+        return true
+    end
+    self.tokenizer.pushToken()
+end
+
 function parser.advance(self, id)
     local node = self:pullNode()
     if node.id ~= id then
@@ -317,10 +330,18 @@ function parser.skip_eol(self)
     if not tok then
         return
     end
-    if not (tok.value == ";" or tok.value == "nl") then
+    if not (tok.value == ";" or tok.value == "nl" or tok.value == ")") then
         error(tok.row..":"..tok.col.." Expected newline or semicolon. Got '"..tok.value.."'")
     end
-    self.tokenizer.skip(tok)
+    if tok.value ~= ")" then
+        self.tokenizer.skip(tok)
+        return tok.value
+    end
+end
+
+
+function is_statement(expr)
+    return expr.isstatement or expr.id == "var" or expr.id == "="
 end
 
 function is_literal(expr)
@@ -452,16 +473,40 @@ make_node(")")
 
 -- Grouping expressions
 make_node("gparen").nud = function(self)
-    local node = parser:pullNode()
-    if node.id == ")" then
-        return null_node -- should be empty tuple or error instead?
-    end
-    parser.tokenizer.pushToken()
+    local pnode = {
+        id = "block",
+        stats = {},
+        format = function(self)
+            return strformat("(block {1})", strjoin(map_format(self.stats)))
+        end
+    }
 
-    local expr = parser:expression() -- FIXME: need ot be statement
-    expr.parenthesised = true
-    parser:skip(")")
-    return expr
+    if parser:pullAndSkip(")") then
+        return pnode
+    end
+
+    local stat = parser:statement()
+    table.insert(pnode.stats, stat)
+
+    if parser:pullAndSkip(")") then
+        if is_statement(stat) then
+            return pnode
+        else
+            stat.parenthesised = true
+            return stat
+        end
+    end
+
+    -- At this point we are sure that we're parsing a block
+    -- and not a parenthesised expression
+    while true do
+        if parser:pullAndSkip(")") then
+            break
+        end
+        table.insert(pnode.stats, parser:statement())
+    end
+
+    return pnode
 
     --local exprs = {expression()}
     ----print("Got expr")
@@ -501,6 +546,8 @@ make_node("gparen").nud = function(self)
     --}
 end
 make_node("cparen").nud = make_node("gparen").nud
+make_node("gparen").snud = make_node("gparen").nud
+make_node("cparen").snud = make_node("gparen").snud
 
 -- Funcalls
 make_node("cparen", 1).led = function(self, left)

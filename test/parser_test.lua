@@ -69,6 +69,16 @@ assertEq("(≠ (> a b) c)", expr("a > b ≠ c"))
 assertEq("(≥ (≤ a b) c)", expr("a ≤ b ≥ c"))
 assertEq("(== (≠ a b) c)", expr("a ≠ b == c"))
 
+-- Grouping
+assertEq("1", expr("(1)"))
+assertEq("1.", expr("((1.))"))
+assertEq("1.3", expr("( \t\n1.3\n\t)"))
+assertEq("a", expr("( \t(\n a\n)\n\n)"))
+assertEq("(- (* (+ 1 2) (+ 3 4)) (* 5 (/ 7 (- 8 1))))",
+         expr("(1 + 2) * (3 + 4) - 5*(7/(8-1))"))
+assertEq("(- (** (/ 1 (- 2)) (- (• 3 (- 4)))))",
+         expr("-(1/-2)**(-(3•-4))"))
+
 -- Ifs
 assertEq("(if 1 2)", expr("if 1 2"))
 assertEq("(if 1 2)", expr("if (1) 2"))
@@ -81,16 +91,6 @@ assertEq("(if 1 2)", expr("if 1 (\n2\n)"))
 assertError("1:1 Expected then-clause to begin on the same line", expr, "if (1)")
 assertError("Unexpected end of input", expr, "if (1) 2 else")
 assertError("1:1 Expected then-clause to begin on the same line", expr, "if (1)\n2")
-
--- Grouping
-assertEq("1", expr("(1)"))
-assertEq("1.", expr("((1.))"))
-assertEq("1.3", expr("( \t\n1.3\n\t)"))
-assertEq("a", expr("( \t(\n a\n)\n\n)"))
-assertEq("(- (* (+ 1 2) (+ 3 4)) (* 5 (/ 7 (- 8 1))))",
-         expr("(1 + 2) * (3 + 4) - 5*(7/(8-1))"))
-assertEq("(- (** (/ 1 (- 2)) (- (• 3 (- 4)))))",
-         expr("-(1/-2)**(-(3•-4))"))
 
 -- Non-expressions
 assertError("Trying to use 'var' in prefix position.",
@@ -112,10 +112,18 @@ assertEq("((- a) 1 (- b) (* 2 c) (- 3))", expr_list("(-a, 1, -b, 2* c, -3)"))
 assertError("Trying to use ',' in prefix position.", expr_list, "(a 1, b 2)")
 
 -- Block (list of statements)
---assertEq("(block (var a 1) (* a 2) (block (+ 4 3) (- a)))",
-         --expr("(var a = 1; a * 2; (4 + 3; -a))"))
---assertEq("(block (var a 1) (* a 2) (block (+ 4 3) (- a)))",
-         --expr("(\n\tvar a = 1\n\ta * 2\n\t(\n\t\t4 + 3\n\t\t-a\n\t)\n)"))
+assertEq("1", expr("(1)"))
+assertEq("1", expr("(\n1\n)"))
+assertEq("(block 1 2)", expr("(1;2)"))
+assertEq("(block 1 2)", expr("(1\n2)"))
+assertError("1:2 Expected newline or semicolon. Got '2'", expr, "(1 2)")
+assertEq("(block 1)", expr("(1;)"))
+assertEq("(block 1 ;)", expr("(1\n;)"))
+
+assertEq("(block (var a 1) (* a 2) (block (+ 4 3) (- a)))",
+         expr("(var a = 1; a * 2; (4 + 3; -a))"))
+assertEq("(block (var a 1) (* a 2) (block (+ 4 3) (- a)))",
+         expr("(\n\tvar a = 1\n\ta * 2\n\t(\n\t\t4 + 3\n\t\t-a\n\t)\n)"))
 
 -- Statements
 assertEq(nil, stat(""))
