@@ -100,11 +100,11 @@ assertError("Trying to use 'var' in prefix position.",
 
 -- Expression list
 assertEq("(a 1 b 2 \"c\" 3)", expr_list("(a 1 b 2 \"c\" 3)"))
-
--- FIXME: disallow complex expressions with no commas
-assertError("(a 1 b 2 c 3)", expr_list, "(a (1) b 2 ((c)) 3)")
-assertError("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list, "(a(1) b 2((c)) 3)")
-assertError("((- a) (- 1 b) (- (* 2 c) 3))", expr_list, "(-a 1 -b 2* c -3)")
+assertEq("(a 1 b 2 \"c\" 3)", expr_list("(\na\n \n1 \nb \n2 \n\"c\" \n3\n)"))
+assertError("Expected a literal or identifier. Got '(1)'", expr_list, "(a (1) b 2 ((c)) 3)")
+assertError("Expected a literal or identifier. Got '(c)'", expr_list, "(a ((c)) 3)")
+assertError("Expected a literal or identifier. Got '(funcall a (1))'", expr_list, "(a(1) b 2((c)) 3)")
+assertError("Expected a literal or identifier. Got '(- a)'", expr_list, "(-a 1 -b 2* c -3)")
 
 assertEq("(a 1 b 2 c 3)", expr_list("(a, (1), b, 2, ((c)), 3)"))
 assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1), b, 2((c)), 3)"))

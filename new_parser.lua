@@ -323,23 +323,57 @@ function parser.skip_eol(self)
     self.tokenizer.skip(tok)
 end
 
+function is_literal(expr)
+    return expr.id == "int" or expr.id == "float" or expr.id == "string"
+end
+
+function check_simple_expr(expr)
+    if not (is_literal(expr) or expr.id == "ident") or expr.parenthesised then
+        local fmt
+        if expr.parenthesised then
+            fmt = "("..expr:format()..")"
+        else
+            fmt = expr:format()
+        end
+        error("Expected a literal or identifier. Got '"..fmt.."'")
+    end
+end
+
 function parser.expr_list_until(self, term)
+    local pnode = {
+        id = "exprlist",
+        exprs = {},
+        format = function(self)
+            return strformat("({1})", strjoin(map_format(self.exprs)))
+        end
+    }
+
+    -- Simple case of zero expressions
     local node = self:pullNode()
     if node.id == term then
-        return {}
+        return pnode
     else
         self.tokenizer.pushToken()
     end
 
-    local exprs = {}
-    table.insert(exprs, self:expression())
+    local expr = self:expression()
+    table.insert(pnode.exprs, expr)
 
+    -- Before validating the first expression, see if we're dealing with commas
+    -- here
     local parsing_commas = false
     node = self:pullNode()
-    if node.id == "," then
+    if node.id == term then
+        return pnode
+    elseif node.id == "," then
         parsing_commas = true
     end
     self.tokenizer.pushToken()
+
+    -- If no comma was found, only simple expressions are allowed
+    if not parsing_commas then
+        check_simple_expr(expr)
+    end
 
     while true do
         node = self:pullNode()
@@ -350,16 +384,14 @@ function parser.expr_list_until(self, term)
         else
             self.tokenizer.pushToken()
         end
-        table.insert(exprs, self:expression())
+        local expr = self:expression()
+        if not parsing_commas then
+            check_simple_expr(expr)
+        end
+        table.insert(pnode.exprs, expr)
     end
 
-    return {
-        id = "exprlist",
-        exprs = exprs,
-        format = function(self)
-            return strformat("({1})", strjoin(map_format(self.exprs)))
-        end
-    }
+    return pnode
 end
 
 --
@@ -427,6 +459,7 @@ make_node("gparen").nud = function(self)
     parser.tokenizer.pushToken()
 
     local expr = parser:expression() -- FIXME: need ot be statement
+    expr.parenthesised = true
     parser:skip(")")
     return expr
 
