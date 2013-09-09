@@ -69,6 +69,19 @@ assertEq("(≠ (> a b) c)", expr("a > b ≠ c"))
 assertEq("(≥ (≤ a b) c)", expr("a ≤ b ≥ c"))
 assertEq("(== (≠ a b) c)", expr("a ≠ b == c"))
 
+-- Ifs
+assertEq("(if 1 2)", expr("if 1 2"))
+assertEq("(if 1 2)", expr("if (1) 2"))
+assertEq("(if 1 2)", expr("if 1 (2)"))
+assertEq("(if 1 2)", expr("if (1) (2)"))
+assertEq("(if 1 2 3)", expr("if (1) (2) else 3"))
+assertEq("(if 1 2 3)", expr("if (1) (2) else (3)"))
+assertEq("(if 1 2)", expr("if 1 (\n2)"))
+assertEq("(if 1 2)", expr("if 1 (\n2\n)"))
+assertError("1:1 Expected then-clause to begin on the same line", expr, "if (1)")
+assertError("Unexpected end of input", expr, "if (1) 2 else")
+assertError("1:1 Expected then-clause to begin on the same line", expr, "if (1)\n2")
+
 -- Grouping
 assertEq("1", expr("(1)"))
 assertEq("1.", expr("((1.))"))

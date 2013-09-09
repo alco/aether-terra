@@ -521,10 +521,17 @@ end
 make_node("if").nud = function(self)
     local pnode = {
         id = "if",
-        cond = parser:expression(),
-        thenclause = parser:expression()
+        cond = parser:expression()
+        --thenclause = parser:expression()
     }
+    local tok = parser.tokenizer.peekToken()
+    if not tok or tok.value == "nl" or tok.value == ";" then
+        error(self.tok.row..":"..self.tok.col.." Expected then-clause to begin on the same line")
+    end
+
+    pnode.thenclause = parser:expression()
     if parser:peekAndSkip("else") then
+        -- FIXME: it's still possible to move expressions over to the next line
         pnode.elseclause = parser:expression()
     end
     pnode.format = function(self)
