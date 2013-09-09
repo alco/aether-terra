@@ -22,7 +22,10 @@ end
 function stat(line)
     local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
     parser.tokenizer = tt
-    return parser:statement():format()
+    local result = parser:statement()
+    if result then
+        return result:format()
+    end
 end
 
 function all_stats(line)
@@ -44,7 +47,7 @@ assertEq("1.3", expr("1.3"))
 assertEq("a", expr("a"))
 assertEq("abc'", expr("abc'"))
 assertEq("x?", expr("x?"))
-assertEq("hello\tworld", expr("\"hello\\tworld\""))
+assertEq("\"hello\tworld\"", expr("\"hello\\tworld\""))
 
 -- Arithmetic
 assertEq("(+ 1 1)", expr("1+1"))
@@ -83,11 +86,12 @@ assertError("Trying to use 'var' in prefix position.",
             expr, "var a = 1")
 
 -- Expression list
-assertEq("(a 1 b 2 c 3)", expr_list("(a (1) b 2 ((c)) 3)"))
+assertEq("(a 1 b 2 \"c\" 3)", expr_list("(a 1 b 2 \"c\" 3)"))
 
 -- FIXME: disallow complex expressions with no commas
-assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1) b 2((c)) 3)"))
-assertEq("((- a) (- 1 b) (- (* 2 c) 3))", expr_list("(-a 1 -b 2* c -3)"))
+assertError("(a 1 b 2 c 3)", expr_list, "(a (1) b 2 ((c)) 3)")
+assertError("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list, "(a(1) b 2((c)) 3)")
+assertError("((- a) (- 1 b) (- (* 2 c) 3))", expr_list, "(-a 1 -b 2* c -3)")
 
 assertEq("(a 1 b 2 c 3)", expr_list("(a, (1), b, 2, ((c)), 3)"))
 assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1), b, 2((c)), 3)"))
@@ -95,8 +99,14 @@ assertEq("((- a) 1 (- b) (* 2 c) (- 3))", expr_list("(-a, 1, -b, 2* c, -3)"))
 assertError("Trying to use ',' in prefix position.", expr_list, "(a 1, b 2)")
 
 -- Block (list of statements)
+--assertEq("(block (var a 1) (* a 2) (block (+ 4 3) (- a)))",
+         --expr("(var a = 1; a * 2; (4 + 3; -a))"))
+--assertEq("(block (var a 1) (* a 2) (block (+ 4 3) (- a)))",
+         --expr("(\n\tvar a = 1\n\ta * 2\n\t(\n\t\t4 + 3\n\t\t-a\n\t)\n)"))
 
 -- Statements
+assertEq(nil, stat(""))
+assertEq(nil, stat("\n"))
 assertEq("(var a)", stat("var a"))
 assertEq("(var a (+ 1 2))", stat("var a = 1 + 2"))
 assertError("Unexpected 'int'. Expected 'ident'", stat, "var 1")
@@ -106,6 +116,18 @@ assertError("1:3 Expected newline or semicolon. Got 'var'", stat, "var a var")
 assertError("Trying to use 'var' in prefix position.", stat, "var a = var b")
 
 -- Newlines and semicolons
+assertEq("1", expr("1\n"))
+assertEq("1", expr("\n1"))
+assertEq("1", expr("\t \n1"))
+
+assertEq("(+ 1 2)", expr("\n1 + 2"))
+assertEq("1", expr("1\n + 2"))
+assertEq("(+ 1 2)", expr("1 +\n 2"))
+
+assertEq("1", stat("1\n + 2"))
+assertEq("(+ 1 2)", stat("1 +\n 2"))
+--assertError("", all_stats, "1\n + 2")
+
 assertEq(";", stat(";"))
 assertEq(";", stat(";;"))
 assertEq(";", stat(";1"))

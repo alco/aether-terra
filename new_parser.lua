@@ -183,10 +183,11 @@ end
 function parser.statement(self, rbp)
     rbp = rbp or 0
 
+    -- May be an empty statement, so we don't pull
     self:skip_optional_eol()
-
     local node = self:peekNode()
     if not node then
+        assert(self.tokenizer.atEOF())
         return
     end
     if node.id == ";" then
@@ -259,6 +260,8 @@ function map_token(tok)
 end
 
 function parser.pullNode(self)
+    self:skip_optional_eol()
+
     local tok = self.tokenizer.pullToken()
     if not tok then
         error("Unexpected end of input")
@@ -279,13 +282,15 @@ function parser.advance(self, id)
     return node
 end
 
+function parser.skip(self, tok)
+    self:skip_optional_eol()
+    self.tokenizer.skip(tok)
+end
+
 function parser.skip_optional_eol(self)
     while true do
         local tok = self.tokenizer.peekToken()
-        if not tok then
-            break
-        end
-        if tok.value == "nl" then
+        if tok and tok.value == "nl" then
             self.tokenizer.skip(tok)
         else
             break
@@ -350,6 +355,16 @@ end
 for _, n in ipairs({"int", "float", "ident", "string"}) do
     make_default_node(n)
 end
+make_node("string").nud = function(self)
+    return {
+        id = self.id,
+        value = self.tok.value,
+        format = function(self)
+            return strformat("\"{1}\"", self.value)
+        end
+    }
+end
+make_node("string").snud = make_node("string").nud
 
 -- Comparisons
 make_infix("==", 8)
@@ -391,8 +406,6 @@ make_node(")")
 
 -- Grouping expressions
 make_node("gparen").nud = function(self)
-    parser:skip_optional_eol()
-
     local node = parser:pullNode()
     if node.id == ")" then
         return null_node -- should be empty tuple or error instead?
@@ -400,8 +413,7 @@ make_node("gparen").nud = function(self)
     parser.tokenizer.pushToken()
 
     local expr = parser:expression() -- FIXME: need ot be statement
-    parser:skip_optional_eol()
-    parser.tokenizer.skip(")")
+    parser:skip(")")
     return expr
 
     --local exprs = {expression()}
@@ -453,7 +465,7 @@ make_node("cparen", 1).led = function(self, left)
             return strformat("(funcall {1} ({2}))", self.name:format(), strjoin(map_format(self.args)))
         end
     }
-    parser.tokenizer.skip(")")
+    parser:skip(")")
     return pnode
 end
 
@@ -479,7 +491,7 @@ make_node("var").snud = function(self)
 
     local node = parser:peekNode()
     if node and node.id == "=" then
-        parser.tokenizer.skip("=")
+        parser:skip("=")
         pnode.value = parser:expression()
     end
     --error("Bad variable definition")
@@ -501,7 +513,7 @@ make_node("if").nud = function(self)
         thenclause = parser:expression()
     }
     if parser.tokenizer.peekToken() and parser.tokenizer.peekToken().value == "else" then
-        parser.tokenizer.skip("else")
+        parser:skip("else")
         pnode.elseclause = parser:expression()
     end
     pnode.format = function(self)
@@ -524,7 +536,7 @@ make_node("fn").nud = function(self)
     if node.id == "cparen" then
         -- function literal
         pnode.args = {parser:expression()} --parse_expr_list_until(")")
-        parser.tokenizer.skip(")")
+        parser:skip(")")
         pnode.body = parser:expression()
     elseif node.id == "ident" then
         ---- function definition
