@@ -269,9 +269,23 @@ function parser.pullNode(self)
     return map_token(tok)
 end
 
-function parser.peekNode(self)
+function parser.peekNode(self, value)
     local tok = self.tokenizer.peekToken()
     return map_token(tok)
+end
+
+function parser.peekToken(self, value)
+    local tok = self.tokenizer.peekToken()
+    if value then
+        return tok and tok.value == value
+    end
+end
+
+function parser.peekAndSkip(self, value)
+    if self:peekToken(value) then
+        self:skip(value)
+        return true
+    end
 end
 
 function parser.advance(self, id)
@@ -489,9 +503,7 @@ make_node("var").snud = function(self)
     local pnode = {}
     pnode.name = parser:advance("ident"):nud()
 
-    local node = parser:peekNode()
-    if node and node.id == "=" then
-        parser:skip("=")
+    if parser:peekAndSkip("=") then
         pnode.value = parser:expression()
     end
     --error("Bad variable definition")
@@ -512,8 +524,7 @@ make_node("if").nud = function(self)
         cond = parser:expression(),
         thenclause = parser:expression()
     }
-    if parser.tokenizer.peekToken() and parser.tokenizer.peekToken().value == "else" then
-        parser:skip("else")
+    if parser:peekAndSkip("else") then
         pnode.elseclause = parser:expression()
     end
     pnode.format = function(self)
