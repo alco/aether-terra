@@ -129,6 +129,7 @@ function make_prefix(op, precedence)
         }
         return pnode
     end
+    node.snud = node.nud
     return node
 end
 
@@ -145,6 +146,7 @@ function _make_infix_common(op, precedence, new_pred)
         }
         return pnode
     end
+    node.sled = node.led
     return node
 end
 

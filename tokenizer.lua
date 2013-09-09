@@ -166,7 +166,11 @@ function new(opts)
     function tokenizer.atEOF()
         local status, errorstr = pcall(_token_coro_fn)
         if status then
-            return not errorstr
+            if errorstr then
+                return false
+            end
+            status, errorstr = pcall(_token_coro_fn)
+            return status == false and errorstr == "cannot resume dead coroutine"
         else
             return errorstr == "cannot resume dead coroutine"
         end

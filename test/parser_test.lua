@@ -124,6 +124,8 @@ assertEqList({"1"}, all_stats("1;\n"))
 assertEqList({";","1",";"}, all_stats("\n;\n1;\n;\n"))
 assertEqList({";","1",";"}, all_stats("\n;\n1\n;\n"))
 
+assertEqList({"(var a)", "(= a (+ a 1))","(- 4)"}, all_stats("var a\na = a + 1\n-4;"))
+
 -- Assignment
 assertError("Unable to use '=' in expression", expr, "a = 1")
 assertEq("(= a 1)", stat("a = 1"))
