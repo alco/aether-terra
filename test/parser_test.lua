@@ -84,6 +84,8 @@ assertError("Trying to use 'var' in prefix position.",
 
 -- Expression list
 assertEq("(a 1 b 2 c 3)", expr_list("(a (1) b 2 ((c)) 3)"))
+
+-- FIXME: disallow complex expressions with no commas
 assertEq("((funcall a (1)) b (funcall 2 (c)) 3)", expr_list("(a(1) b 2((c)) 3)"))
 assertEq("((- a) (- 1 b) (- (* 2 c) 3))", expr_list("(-a 1 -b 2* c -3)"))
 
@@ -113,12 +115,14 @@ assertEqList({";"}, all_stats(";"))
 assertEqList({";",";"}, all_stats(";;"))
 assertEqList({";","1"}, all_stats(";1"))
 assertEqList({";","1"}, all_stats(";1;"))
-assertEqList({";"}, all_stats("\n;"))
+assertEqList({";"}, all_stats("\n\n;"))
 assertEqList({";","1",";",";"}, all_stats("\n;1;;\n;"))
 assertEqList({"1",";"}, all_stats("1\n;"))
 assertEqList({"1"}, all_stats("1;"))
---assertEqList({}, all_stats("\n"))
---assertEqList({"1"}, all_stats("1;\n"))
+assertEqList({}, all_stats("\n"))
+assertEqList({"1"}, all_stats("1;\n"))
+assertEqList({";","1",";"}, all_stats("\n;\n1;\n;\n"))
+assertEqList({";","1",";"}, all_stats("\n;\n1\n;\n"))
 
 -- Assignment
 assertError("Unable to use '=' in expression", expr, "a = 1")

@@ -105,6 +105,7 @@ function new(opts)
     -- (usually a single line)
     function tokenizer.peekToken()
         if next_token then
+            --print("Returning peek token "..Tokens.formatoken(next_token))
             return next_token
         end
         next_token = get_token_async()
@@ -113,6 +114,7 @@ function new(opts)
         --else
             --print("did peek no token")
         --end
+        --print("Returning peek token "..Tokens.formatoken(next_token))
         return next_token
     end
 
@@ -125,6 +127,7 @@ function new(opts)
         else
             current_token = get_token_sync()
         end
+        --print("Returning token "..Tokens.formatoken(current_token))
         return current_token
     end
 
@@ -162,7 +165,11 @@ function new(opts)
 
     function tokenizer.atEOF()
         local status, errorstr = pcall(_token_coro_fn)
-        return status == false and errorstr == "cannot resume dead coroutine"
+        if status then
+            return not errorstr
+        else
+            return errorstr == "cannot resume dead coroutine"
+        end
     end
 
     return tokenizer

@@ -286,6 +286,10 @@ function tokenize(str)
 end
 
 function formatoken(tok)
+    if not tok then
+        return "nil"
+    end
+
     local str = tok.type
     if tok.value then
         str = str.." : "..tok.value
