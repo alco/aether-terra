@@ -14,3 +14,71 @@ a = if this_is_true (
 )
 
 if (a ≤ b) 4 * 5 else -4
+
+var f = fn(x y z) x + y + z
+f = fn() (x + y + z)
+//f = 〖➀ + ➁ + ➂〗
+
+//if a ≤ b (4 * 5) else -4
+//
+//if a ≤ b (4 * 5) else (-4)
+//
+//if a ≤ b then 4 * 5 else -4
+//
+//a ≤ b ? 4 * 5 : -4
+//
+//(a ≤ b ? 4 * 5 : -4)
+//
+//if a ≤ b ( 4 * 5 )
+//
+//if a ≤ b ( 4 * 5 : -4 )
+//
+//
+//var x = (5 if y < 0) || 1
+//
+//var x = y < 0 and 5 or 1
+//
+//var x = y < 0 then 5 else 1          // +1
+//
+//var x = y < 0 ? 5 : 1                  // +1
+//
+//var x = (y < 0) ? 5 , 1
+//
+//var x = if (y < 0) 5 else 1          // + 1
+//
+//
+//if (a ≤ b) (
+//    4 * 5
+//) else -4
+//
+//if (a ≤ b) (
+//    4 * 5
+//) else (
+//    -4
+//)
+//
+//if a ≤ b then
+//    4 * 5
+//else
+//    -4
+//end
+//
+//
+//// Prefinal if
+//if a ≤ b (
+//    4 * 5
+//)
+//
+//// With else
+//if a ≤ b (
+//    4 * 5
+//) else (
+//    -4
+//)
+//
+//// One-liner
+//if (a ≤ b) 4 * 5   // should not be possible
+//if (a ≤ b) 4 * 5 else -4
+//if a ≤ b (4 * 5) else (-4)
+//if a ≤ b (4 * 5 : -4)
+//(a ≤ b ? 4 * 5 : -4)

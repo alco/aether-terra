@@ -18,5 +18,7 @@ assertEqList({
     "(funcall some_func (a b c 1 2))",
     "(funcall other_func ((+ a b) (* 2 b) \"c\"))",
     "(= a (if this_is_true (funcall true (value)) (funcall false ())))",
-    "(if (≤ a b) (* 4 5) (- 4))"
+    "(if (≤ a b) (* 4 5) (- 4))",
+    "(var f (fn (x y z) (+ (+ x y) z)))",
+    "(= f (fn () (+ (+ x y) z)))"
 }, all_stats("block_fixtures.ae"))

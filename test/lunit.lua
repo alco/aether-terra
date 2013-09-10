@@ -17,7 +17,7 @@ function assertEqList(given, expected)
         cnt = cnt + 1
     end
     if #expected ~= #given then
-        error("Not all values were checked. Stop at '"..tostring(expected[cnt]).."'")
+        error("Not all values were checked. Stopped at '"..tostring(expected[cnt]).."'")
     end
 end
 

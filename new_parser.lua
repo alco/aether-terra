@@ -644,8 +644,7 @@ make_node("fn").nud = function(self)
     local node = parser:pullNode()
     if node.id == "cparen" then
         -- function literal
-        pnode.args = {parser:expression()} --parse_expr_list_until(")")
-        parser:skip(")")
+        pnode.args = parser:expr_list_until(")")
         pnode.body = parser:expression()
     elseif node.id == "ident" then
         ---- function definition
@@ -662,7 +661,7 @@ make_node("fn").nud = function(self)
         ----end
         --self.body = expression()
     else
-        error("Bad function definition")
+        error(self.tok.row..":"..self.tok.col.." Bad function definition")
     end
     pnode.format = function(self)
         local head = ""
@@ -670,17 +669,12 @@ make_node("fn").nud = function(self)
             head = " "..self.head:format()
         end
 
-        local args = ""
-        if self.args then
-            args = " "..strformat("({1})", strjoin(map_format(self.args)))
-        end
-
         local body = ""
         if self.body then
             body = " "..self.body:format()
         end
 
-        return strformat("(fn {1}{2}{3})", head, args, body)
+        return strformat("(fn {1}{2}{3})", head, self.args:format(), body)
     end
     return pnode
 end

@@ -198,6 +198,14 @@ function parseString(str, pos)
     return makeLiteralString(result), pos + 1
 end
 
+function skipLine(str, pos)
+    pso = pos or 1
+    while pos <= str:len() and str:sub(pos, pos) ~= "\n" do
+        pos = pos + 1
+    end
+    return pos
+end
+
 function tokenize(str)
     local tokens = {}
     local pos = 1
@@ -224,6 +232,9 @@ function tokenize(str)
             tok, pos = parseNumber(str, pos)
         -- elseif first:match(":") then
         --     tok, pos = parseAtom(str, pos)
+        elseif pos <= str:len()-1 and str:sub(pos, pos+1) == "//" then
+            -- ignore the comment completely
+            pos = skipLine(str, pos)
         elseif pos <= str:len()-2 and match_tok(ops, str:sub(pos, pos+2)) then
             op = str:sub(pos, pos+2)
             tok = makeOperator(op)
