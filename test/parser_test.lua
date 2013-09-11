@@ -178,3 +178,13 @@ assertEqList({"(var a)", "(= a (+ a 1))","(- 4)"}, all_stats("var a\na = a + 1\n
 -- Assignment
 assertError("Unable to use '=' in expression", expr, "a = 1")
 assertEq("(= a 1)", stat("a = 1"))
+
+-- Function definition
+assertEq("(def sin(x))", stat("def sin(x)"))
+assertEq("(def pow(base exp))", stat("def pow(base exp)"))
+assertEq("(def sin(x))", stat("def sin(x) :: flt -> flt"))
+assertEq("(def pow(base exp))", stat("def pow(base exp) :: (flt flt) -> flt"))
+assertError("Trying to use 'def' in prefix position.", expr, "def sin(x)")
+assertError("Unexpected 'gparen'. Expected 'ident'", stat, "def (sin(x))")
+assertError("Unexpected end of input", stat, "def x")
+assertError("Unexpected 'int'. Expected 'cparen'", stat, "def x 1")

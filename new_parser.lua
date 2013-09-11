@@ -276,7 +276,7 @@ function token_to_node(tok)
     elseif node_table[tok.type] then
         return new_node(tok, tok.type)
     end
-    error(tok.row..":"..tok.col..": Unrecognized token '"..tok.value.."'")
+    error(tok.row..":"..tok.col..": Behavior not defined for token '"..tok.value.."'")
 end
 
 function map_token(tok)
@@ -735,24 +735,32 @@ make_node("fn").nud = function(self)
         parser.tokenizer.pushToken()
 
         parse_shortfuct_function(pnode)
-
-        --putBackNode(node)
-
-        --local expr = expression()
-        ----print(pretty_print(expr))
-        --if expr.id ~= "funcall" then
-            --error("Expected a function declaration")
-        --end
-        --self.head = expr
-        ----if peekParseNode() and peekParseNode().id == "::" then
-            ----self.sig = expression()
-        ----end
-        --self.body = expression()
-    --else
-        --error(self.tok.row..":"..self.tok.col.." Bad function definition")
     end
     return pnode
 end
 make_node("fn").snud = make_node("fn").nud
+
+make_node("def").snud = function(self)
+    local pnode = {
+        id = "def",
+        format = function(self)
+            return strformat("(def {1}{2})", self.name.tok.value, self.args:format())
+        end
+    }
+
+    pnode.name = parser:advance("ident")
+    parser:advance("cparen")
+    pnode.args = parser:expr_list_until(")")
+
+    if parser:peekAndSkip("::") then
+        -- parse type signature
+    end
+
+    if parser:peekNode() then
+        pnode.body = parser:expression()
+    end
+
+    return pnode
+end
 
 return parser
