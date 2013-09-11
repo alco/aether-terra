@@ -21,5 +21,10 @@ assertEqList({
     "(if (≤ a b) (* 4 5) (- 4))",
     "(var f (fn (x y z) (+ (+ x y) z)))",
     "(= f (fn () (+ (+ x y) z)))",
-    "(= f (fn () (+ (+ ➀ ➁) ➂)))"  -- FIXME: extract anonymous args
+    "(= f (fn (sym#1 sym#2 sym#3) (+ (+ sym#1 sym#2) sym#3)))",
+    "(= f (fn (sym#4 sym#5 sym#6) (+ (+ sym#4 (* sym#5 sym#5)) sym#6)))",
+    "(= f (fn (sym#7 sym#8) (+ (+ sym#7 (* sym#8 sym#8)) 3)))",
+    "(= f (+ (fn (sym#9 sym#10) (+ sym#9 (* sym#10 sym#10))) 3))",
+    "(= f (fn (sym#11) sym#11))",
+    "(= f (fn () 1))"
 }, all_stats("block_fixtures.ae"))

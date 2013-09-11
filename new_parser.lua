@@ -66,7 +66,14 @@ val_fn = function(self)
     return self.value
 end
 id_fn = function(self)
-    return { id = self.id, value = self.tok.value, format = val_fn }
+    return {
+        id = self.id,
+        value = self.tok.value,
+        format = val_fn,
+        visit = function(self, visitor)
+            visitor(self)
+        end
+    }
 end
 err_nud_fn = function(self)
     error("Trying to use '"..self.id.."' in prefix position.")
@@ -133,6 +140,10 @@ function make_prefix(op, precedence)
             first = parser:expression(precedence),
             format = function(self)
                 return strformat("({1} {2})", self.id, self.first:format())
+            end,
+            visit = function(self, visitor)
+                visitor(self)
+                self.first:visit(visitor)
             end
         }
         return pnode
@@ -150,6 +161,11 @@ function _make_infix_common(op, precedence, new_pred)
             second = parser:expression(new_pred),
             format = function(self)
                 return strformat("({1} {2} {3})", self.id, self.first:format(), self.second:format())
+            end,
+            visit = function(self, visitor)
+                visitor(self)
+                self.first:visit(visitor)
+                self.second:visit(visitor)
             end
         }
         return pnode
@@ -425,12 +441,36 @@ function parser.expr_list_until(self, term)
     return pnode
 end
 
---function _extract_args(expr, list)
---end
+local symnumber = 1
+function gensym()
+    local str = "sym#"..symnumber
+    symnumber = symnumber + 1
+    return str
+end
 
---function extract_anonymous_args(expr)
-    --local args, body = _extract_args(expr, {})
---end
+function mapsym(sym, map)
+    local val = map[sym]
+    if not val then
+        val = gensym()
+        map[sym] = val
+        table.insert(map.order, val)
+    end
+    return val
+end
+
+function _extract_args(expr, map)
+    expr:visit(function(self)
+        if self.id == "ident" and (self.value == "➀" or self.value == "➁" or self.value == "➂") then
+            self.value = mapsym(self.value, map)
+        end
+    end)
+end
+
+function extract_anonymous_args(expr)
+    local argmap = {order = {}}
+    _extract_args(expr, argmap)
+    return argmap.order
+end
 
 --
 -- Parse node definitions
@@ -661,15 +701,14 @@ make_node("fn").nud = function(self)
         -- short function literal
         parser.tokenizer.pushToken()
 
-        --local args, pnody.body = extract_anonymous_args(parser:expression())
+        pnode.body = parser:expression()
         pnode.args = {
             id = "exprlist",
-            exprs = {},
+            exprs = extract_anonymous_args(pnode.body),
             format = function(self)
                 return strformat("({1})", strjoin(map_format(self.exprs)))
             end
         }
-        pnode.body = parser:expression()
 
         --putBackNode(node)
 
@@ -701,5 +740,6 @@ make_node("fn").nud = function(self)
     end
     return pnode
 end
+make_node("fn").snud = make_node("fn").nud
 
 return parser
