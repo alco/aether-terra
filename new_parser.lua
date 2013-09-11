@@ -425,6 +425,13 @@ function parser.expr_list_until(self, term)
     return pnode
 end
 
+--function _extract_args(expr, list)
+--end
+
+--function extract_anonymous_args(expr)
+    --local args, body = _extract_args(expr, {})
+--end
+
 --
 -- Parse node definitions
 --
@@ -636,6 +643,10 @@ end
 make_node("if").snud = make_node("if").nud
 
 -- Function literal
+--make_node("➀")
+--make_node("➁")
+--make_node("➂")
+
 make_node("fn").nud = function(self)
     local pnode = {
         id = "fn"
@@ -646,8 +657,20 @@ make_node("fn").nud = function(self)
         -- function literal
         pnode.args = parser:expr_list_until(")")
         pnode.body = parser:expression()
-    elseif node.id == "ident" then
-        ---- function definition
+    else
+        -- short function literal
+        parser.tokenizer.pushToken()
+
+        --local args, pnody.body = extract_anonymous_args(parser:expression())
+        pnode.args = {
+            id = "exprlist",
+            exprs = {},
+            format = function(self)
+                return strformat("({1})", strjoin(map_format(self.exprs)))
+            end
+        }
+        pnode.body = parser:expression()
+
         --putBackNode(node)
 
         --local expr = expression()
@@ -660,8 +683,8 @@ make_node("fn").nud = function(self)
             ----self.sig = expression()
         ----end
         --self.body = expression()
-    else
-        error(self.tok.row..":"..self.tok.col.." Bad function definition")
+    --else
+        --error(self.tok.row..":"..self.tok.col.." Bad function definition")
     end
     pnode.format = function(self)
         local head = ""

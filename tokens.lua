@@ -210,6 +210,7 @@ function tokenize(str)
     local tokens = {}
     local pos = 1
     local ops = {"::", "²", "--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
+    local symbols = {"➀", "➁", "➂"}
     local terminals = {"'", "`", "(", ")", "[", "]", "{", "}", ".", ";", ","}
     local whitespace = {" ", "\t", "\n"}
     local newline = "\n"
@@ -235,6 +236,13 @@ function tokenize(str)
         elseif pos <= str:len()-1 and str:sub(pos, pos+1) == "//" then
             -- ignore the comment completely
             pos = skipLine(str, pos)
+            linecount = linecount + 1
+            column = 1
+        elseif pos <= str:len()-2 and match_tok(symbols, str:sub(pos, pos+2)) then
+            local sym = str:sub(pos, pos+2)
+            tok = makeIdentifier(sym)
+            pos = pos + 3
+            column = column + 3
         elseif pos <= str:len()-2 and match_tok(ops, str:sub(pos, pos+2)) then
             op = str:sub(pos, pos+2)
             tok = makeOperator(op)

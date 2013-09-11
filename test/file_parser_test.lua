@@ -20,5 +20,6 @@ assertEqList({
     "(= a (if this_is_true (funcall true (value)) (funcall false ())))",
     "(if (≤ a b) (* 4 5) (- 4))",
     "(var f (fn (x y z) (+ (+ x y) z)))",
-    "(= f (fn () (+ (+ x y) z)))"
+    "(= f (fn () (+ (+ x y) z)))",
+    "(= f (fn () (+ (+ ➀ ➁) ➂)))"  -- FIXME: extract anonymous args
 }, all_stats("block_fixtures.ae"))
