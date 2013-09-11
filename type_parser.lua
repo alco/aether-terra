@@ -44,6 +44,10 @@ function new(parent_parser)
         return pnode
     end
 
+    -- some terminator nodes just to stop parsing
+    make_node(",")
+    make_node("=")
+
     --function table.make_typevar(value)
         --local typevar = make_node("ident")
         --typevar.id = "typevar"

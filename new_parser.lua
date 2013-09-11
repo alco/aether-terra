@@ -327,7 +327,64 @@ function new()
         end
     end
 
+    function parser.var_list_with_sep(self, sep)
+        -- One element is
+        -- a
+        --   OR
+        -- a = 1
+        --   OR
+        -- a: int
+        --   OR
+        -- a: int = 1
+        local pnode = {
+            id = "varlist",
+            vars = {},
+            format = function(self)
+                return Util.strjoin(Util.map_format(self.vars))
+            end
+        }
+
+        while true do
+            local vnode = {
+                id = "defvar",
+                format = function(self)
+                    local typ = ""
+                    if self.typ then
+                        typ = ":"..self.typ:format()
+                    end
+                    local val = ""
+                    if self.value then
+                        val = " "..self.value:format()
+                    end
+                    return Util.strformat("({1}{2}{3})", self.name:format(), typ, val)
+                end
+            }
+            vnode.name = self:advance("ident"):nud()
+            if self:peekAndSkip(":") then
+                vnode.typ = self.type_parser:expression()
+            end
+            if self:peekAndSkip("=") then
+                vnode.value = self:expression()
+            end
+            G.table.insert(pnode.vars, vnode)
+
+            if not self:peekAndSkip(sep) then
+                break
+            end
+        end
+
+        return pnode
+    end
+
     function parser.expr_list_until(self, term)
+        -- ()
+        --   OR
+        -- (a b c)
+        --   OR
+        -- (a 1 "abc")
+        --   OR
+        -- (1+2, a, b)
+        --
         local pnode = {
             id = "exprlist",
             exprs = {},

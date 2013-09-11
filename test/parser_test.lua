@@ -135,18 +135,24 @@ assertError("1:2 Expected newline or semicolon. Got '2'", expr, "(1 2)")
 assertEq("(block 1)", expr("(1;)"))
 assertEq("(block 1 ;)", expr("(1\n;)"))
 
-assertEq("(block (var (a) 1) (* a 2) (block (+ 4 3) (- a)))",
-         expr("(var a = 1; a * 2; (4 + 3; -a))"))
-assertEq("(block (var (a) 1) (* a 2) (block (+ 4 3) (- a)))",
-         expr("(\n\tvar a = 1\n\ta * 2\n\t(\n\t\t4 + 3\n\t\t-a\n\t)\n)"))
-
 -- Statements
 assertEq(nil, stat(""))
 assertEq(nil, stat("\n"))
+
 assertEq("(var (a))", stat("var a"))
-assertEq("(var (a) (+ 1 2))", stat("var a = 1 + 2"))
-assertEq("(var (a) int)", stat("var a int"))
-assertEq("(var (a b c) int)", stat("var a, b, c int"))
+assertEq("(var (a (+ 1 2)))", stat("var a = 1 + 2"))
+assertEq("(var (a 1) (b 2))", stat("var a = 1, b = 2"))
+assertEq("(var (a:int))", stat("var a int"))
+assertEq("(var (a:int) (b:int) (c:int))", stat("var a, b, c int"))
+
+assertEq("(var (a:int))", stat("var a: int"))
+assertEq("(var (a:uint (+ 1 2)))", stat("var a: uint = 1 + 2"))
+assertEq("(var (a:int) (b:uint 5) (c:string))", stat("var a: int, b: uint = 5, c: string"))
+
+assertEq("(block (var (a 1)) (* a 2) (block (+ 4 3) (- a)))",
+         expr("(var a = 1; a * 2; (4 + 3; -a))"))
+assertEq("(block (var (a 1)) (* a 2) (block (+ 4 3) (- a)))",
+         expr("(\n\tvar a = 1\n\ta * 2\n\t(\n\t\t4 + 3\n\t\t-a\n\t)\n)"))
 
 assertError("Unexpected 'int'. Expected 'ident'", stat, "var 1")
 assertError("Unexpected 'gparen'. Expected 'ident'", stat, "var (a)")
