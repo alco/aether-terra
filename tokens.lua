@@ -211,7 +211,7 @@ function tokenize(str)
     local pos = 1
     local ops = {"::", "²", "--", "++", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
     local symbols = {"➀", "➁", "➂"}
-    local terminals = {"'", "`", "(", ")", "[", "]", "{", "}", ".", ";", ","}
+    local terminals = {"〖", "〗", "'", "`", "(", ")", "[", "]", "{", "}", ".", ";", ","}
     local whitespace = {" ", "\t", "\n"}
     local newline = "\n"
     local tok
@@ -270,6 +270,10 @@ function tokenize(str)
                 tok = makeCallParen()
             end
             pos = pos + 1
+        elseif pos <= str:len()-2 and match_tok(terminals, str:sub(pos, pos+2)) then
+            tok = makeTerminal(str:sub(pos, pos+2))
+            pos = pos + 3
+            column = column + 3
         elseif pos <= str:len()-1 and match_tok(terminals, str:sub(pos, pos+1)) then
             tok = makeTerminal(str:sub(pos, pos+1))
             pos = pos + 2

@@ -683,14 +683,47 @@ end
 make_node("if").snud = make_node("if").nud
 
 -- Function literal
---make_node("➀")
---make_node("➁")
---make_node("➂")
+function parse_shortfuct_function(pnode)
+    pnode.body = parser:expression()
+    pnode.args = {
+        id = "exprlist",
+        exprs = extract_anonymous_args(pnode.body),
+        format = function(self)
+            return strformat("({1})", strjoin(map_format(self.exprs)))
+        end
+    }
+end
+
+function make_function_literal_stub()
+    return {
+        id = "fn",
+        format = function(self)
+            local head = ""
+            if self.head then
+                head = " "..self.head:format()
+            end
+
+            local body = ""
+            if self.body then
+                body = " "..self.body:format()
+            end
+
+            return strformat("(fn {1}{2}{3})", head, self.args:format(), body)
+        end
+    }
+end
+
+make_node("〗")
+make_node("〖").nud = function(self)
+    local pnode = make_function_literal_stub()
+    parse_shortfuct_function(pnode)
+    parser:skip("〗")
+    return pnode
+end
+make_node("〖").snud = make_node("〖").nud
 
 make_node("fn").nud = function(self)
-    local pnode = {
-        id = "fn"
-    }
+    local pnode = make_function_literal_stub()
 
     local node = parser:pullNode()
     if node.id == "cparen" then
@@ -701,14 +734,7 @@ make_node("fn").nud = function(self)
         -- short function literal
         parser.tokenizer.pushToken()
 
-        pnode.body = parser:expression()
-        pnode.args = {
-            id = "exprlist",
-            exprs = extract_anonymous_args(pnode.body),
-            format = function(self)
-                return strformat("({1})", strjoin(map_format(self.exprs)))
-            end
-        }
+        parse_shortfuct_function(pnode)
 
         --putBackNode(node)
 
@@ -724,19 +750,6 @@ make_node("fn").nud = function(self)
         --self.body = expression()
     --else
         --error(self.tok.row..":"..self.tok.col.." Bad function definition")
-    end
-    pnode.format = function(self)
-        local head = ""
-        if self.head then
-            head = " "..self.head:format()
-        end
-
-        local body = ""
-        if self.body then
-            body = " "..self.body:format()
-        end
-
-        return strformat("(fn {1}{2}{3})", head, self.args:format(), body)
     end
     return pnode
 end
