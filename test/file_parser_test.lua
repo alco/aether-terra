@@ -37,7 +37,9 @@ assertEqList({
     "(def sqrt(x))",
     "(def cbrt(x))",
     "(def hypot(x y) (block))",
+    "(def hypot(x y) (funcall sqrt ((+ (** x 2) (** y 2)))))",
     "(def sqr(x) (* x x))",
     "(def sqr(x) (** x 2))",
+    "(def cub(x) (+ (** x 3) 1))",
 }, all_stats("funcs.ae"))
 

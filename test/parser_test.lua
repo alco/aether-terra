@@ -62,6 +62,11 @@ assertEq("(/ (/ 1 2) 3)", expr("1/2/3"))
 assertEq("(+ (** 2 (** 3 4)) 1)", expr("2**3**4+1"))
 assertEq("(* (* 2 (** 3 4)) 5)", expr("2*3**4*5"))
 assertEq("(• (* (/ 1 2) 3) 4)", expr("1/2*3•4"))
+
+assertEq("(+ (- 1) (- 2))", expr("-1 + -2"))
+assertEq("(- (- 1) 2)", expr("-1 - 2"))
+assertEq("(* (- 1) 2)", expr("-1 * 2"))
+assertEq("(- (- 1))", expr("- -1"))
 assertEq("(• (/ (- 1) (- (** 2 (- 3)))) (- 4))", expr("-1/-2**-3•-4"))
 
 -- Comparisons

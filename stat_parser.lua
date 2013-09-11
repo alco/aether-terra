@@ -24,6 +24,30 @@ function new()
     local make_infix = parser.make_infix
     local make_infix_r = parser.make_infix_r
 
+    function make_pow(op, pow, precedence)
+        local node = parser.make_node(op, precedence)
+        local powstr = G.tostring(pow)
+        node.led = function(self, left)
+            local pnode = {
+                id = "**",
+                first = left,
+                second = { id = "int", value = powstr, format = function(self) return powstr end },
+                format = function(self)
+                    return Util.strformat("(** {1} {2})", self.first:format(), powstr)
+                end,
+                visit = function(self, visitor)
+                    visitor(self)
+                    self.first:visit(visitor)
+                end
+            }
+            return pnode
+        end
+        node.sled = node.led
+        return node
+    end
+
+    ---
+
     for _, n in G.ipairs({"int", "float", "ident", "string"}) do
         parser.make_default_node(n)
     end
@@ -59,10 +83,14 @@ function new()
 
     -- Unary ops
     make_prefix("-", 30)
+    make_node("-").lbp = 10
 
     -- Exponentiation
-    make_infix_r("↑",  40)  -- exponentiation
-    make_infix_r("**", 40)  -- exponentiation
+    make_infix_r("↑",  40)
+    make_infix_r("**", 40)
+    make_pow("²", 2, 40)
+    make_pow("³", 3, 40)
+
 
     -- Terminals
     make_node("nl")

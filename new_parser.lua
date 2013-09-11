@@ -73,7 +73,7 @@ function new()
     end
 
     function parser.make_prefix(op, precedence)
-        local node = parser.make_node(op)
+        local node = parser.make_node(op, precedence)
         node.nud = function(self)
             local pnode = {
                 id = self.id,
