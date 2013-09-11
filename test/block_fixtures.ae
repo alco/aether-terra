@@ -5,6 +5,11 @@
 )
 
 var a, b, c int
+
+// // Which one to choose?
+// a, b, c = 1, 2, 3       // combined assignment (is it possible for bare commas to imply a tuple???
+// {a, b, c} = {1, 2, 3}   // pattern matching
+
 var e, d string
 var x:int = 1,
     y = 2,
