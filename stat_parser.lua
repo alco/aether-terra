@@ -180,20 +180,45 @@ function new()
 
     -- Variable declaration
     make_node("var").snud = function(self)
-        local pnode = {}
-        pnode.name = parser:advance("ident"):nud()
+        local pnode = {
+            names = {parser:advance("ident"):nud()},
+            format = function(self)
+                local names = Util.strjoin(Util.map_format(self.names))
+                local tail = ""
+                if #self.names > 1 then
+                    tail = " "..self.names[1].typ:format()
+                elseif self.typ then
+                    tail = " "..self.typ:format()
+                elseif self.value then
+                    tail = " "..self.value:format()
+                end
+                return Util.strformat("(var ({1}){2})", names, tail)
+            end
+        }
 
+        -- Check if this is the first form of var:
+        --   var a, b, c int
+        while parser:peekAndSkip(",") do
+            G.table.insert(pnode.names, parser:advance("ident"):nud())
+        end
+
+        if #pnode.names > 1 then
+            -- 1st form of var
+            local typ = type_parser:expression()
+            for _, n in G.ipairs(pnode.names) do
+                n.typ = typ
+            end
+            return pnode
+        end
+
+        -- Only got one identifier so far: second form with or without assignment
         if parser:peekAndSkip("=") then
             pnode.value = parser:expression()
+        elseif parser.tokenizer.peekToken() and parser.tokenizer.peekToken().value ~= "nl" and parser.tokenizer.peekToken().value ~= ";" then -- FIXME: too complicated
+            -- try to parse the type spec
+            pnode.typ = type_parser:expression()
         end
         --error("Bad variable definition")
-        pnode.format = function(self)
-            local value = ""
-            if self.value then
-                value = " "..self.value:format()
-            end
-            return Util.strformat("(var {1}{2})", self.name:format(), value)
-        end
         return pnode
     end
 

@@ -4,6 +4,9 @@
     b - a
 )
 
+var a, b, c int
+var e, d string
+
 some_func(a b c 1 2)
 other_func(a+b, 2*b, "c")
 

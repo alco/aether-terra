@@ -15,12 +15,14 @@ function all_stats(filename)
 end
 
 assertEqList({
-    "(block (var a 1) (var b (* a 2)) (- b a))",
+    "(block (var (a) 1) (var (b) (* a 2)) (- b a))",
+    "(var (a b c) int)",
+    "(var (e d) string)",
     "(funcall some_func (a b c 1 2))",
     "(funcall other_func ((+ a b) (* 2 b) \"c\"))",
     "(= a (if this_is_true (funcall true (value)) (funcall false ())))",
     "(if (≤ a b) (* 4 5) (- 4))",
-    "(var f (fn (x y z) (+ (+ x y) z)))",
+    "(var (f) (fn (x y z) (+ (+ x y) z)))",
     "(= f (fn () (+ (+ x y) z)))",
     "(= f (fn (sym#1 sym#2 sym#3) (+ (+ sym#1 sym#2) sym#3)))",
     "(= f (fn (sym#4 sym#5 sym#6) (+ (+ sym#4 (* sym#5 sym#5)) sym#6)))",
