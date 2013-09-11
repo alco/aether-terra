@@ -1,7 +1,8 @@
 require("lunit")
 
-local parser = require("new_parser")
 local Tokenizer = require("tokenizer")
+local Parser = require("stat_parser")
+local parser = Parser.new()
 
 function all_stats(filename)
     local tt = Tokenizer.new{ file = filename }
@@ -30,3 +31,13 @@ assertEqList({
     "(+ (fn (sym#12 sym#13) (+ sym#12 (* sym#13 sym#13))) 3)",
     "(= f (+ (fn (sym#14 sym#15) (+ sym#14 (* sym#15 sym#15))) 3))",
 }, all_stats("block_fixtures.ae"))
+
+assertEqList({
+    "(def pow(base exp))",
+    "(def sqrt(x))",
+    "(def cbrt(x))",
+    "(def hypot(x y) (block))",
+    "(def sqr(x) (* x x))",
+    "(def sqr(x) (** x 2))",
+}, all_stats("funcs.ae"))
+

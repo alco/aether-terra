@@ -1,0 +1,13 @@
+// Raise to power
+def pow(base exp) :: (flt flt) -> flt
+// Compute square root
+def sqrt(x) :: flt -> flt
+// Compute cubic root
+def cbrt(x) :: flt -> flt
+// Compute hypotenuse
+def hypot(x y) :: (flt flt) -> flt (
+    //sqrt(x² + y²)
+)
+
+def sqr(x) x*x
+def sqr(x) x**2

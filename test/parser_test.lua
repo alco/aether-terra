@@ -1,7 +1,8 @@
 require("lunit")
 
-local parser = require("new_parser")
 local Tokenizer = require("tokenizer")
+local Parser = require("stat_parser")
+local parser = Parser.new()
 
 function nilfn()
 end
@@ -118,6 +119,9 @@ assertEq("((- a) 1 (- b) (* 2 c) (- 3))", expr_list("(-a, 1, -b, 2* c, -3)"))
 assertError("Trying to use ',' in prefix position.", expr_list, "(a 1, b 2)")
 
 -- Block (list of statements)
+assertEq("(block)", expr("()"))
+assertEq("(block ;)", expr("(;)"))
+assertEq("(block)", expr("(\n)"))
 assertEq("1", expr("(1)"))
 assertEq("1", expr("(\n1\n)"))
 assertEq("(block 1 2)", expr("(1;2)"))
