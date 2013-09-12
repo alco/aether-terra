@@ -4,9 +4,17 @@
     b - a
 )
 
+// TODO:
+// * list literal
+// * array type parsing
+// * subscript syntax
+// * slice syntax
+
 var a, b, c int
 
 // // Which one to choose?
+// var a, b, c = 3, 4, "foo"
+// var a, b, c int = 3, 4, 5 // unlikely
 // a, b, c = 1, 2, 3       // combined assignment (is it possible for bare commas to imply a tuple???
 // {a, b, c} = {1, 2, 3}   // pattern matching
 

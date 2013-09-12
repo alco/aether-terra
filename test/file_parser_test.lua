@@ -33,7 +33,7 @@ assertEqList({
     "(= f (fn () 1))",
     "(+ (fn (sym#12 sym#13) (+ sym#12 (* sym#13 sym#13))) 3)",
     "(= f (+ (fn (sym#14 sym#15) (+ sym#14 (* sym#15 sym#15))) 3))",
-}, all_stats("block_fixtures.ae"))
+}, all_stats("fixtures/blocks.ae"))
 
 assertEqList({
     "(def pow(base exp))",
@@ -44,5 +44,5 @@ assertEqList({
     "(def sqr(x) (* x x))",
     "(def sqr(x) (** x 2))",
     "(def cub(x) (+ (** x 3) 1))",
-}, all_stats("funcs.ae"))
+}, all_stats("fixtures/funcs.ae"))
 

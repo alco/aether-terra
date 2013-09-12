@@ -1,2 +1,2 @@
-g_tokenizerParams = { file = "fixture_code.ae" }
+g_tokenizerParams = { file = "fixtures/tokens.ae" }
 dofile("tokenizer_test.lua")
