@@ -85,6 +85,25 @@ assertEq("(- (* (+ 1 2) (+ 3 4)) (* 5 (/ 7 (- 8 1))))",
 assertEq("(- (** (/ 1 (- 2)) (- (• 3 (- 4)))))",
          expr("-(1/-2)**(-(3•-4))"))
 
+-- Arrays
+assertEq("(array ())", expr("[]"))
+assertEq("(array (1))", expr("[1]"))
+assertEq("(array (1))", expr("[\n1\n]"))
+assertEq("(array (1 2 \"str\" b))", expr("[1 2 \"str\" b]"))
+assertEq("(array ((+ 1 2) \"str\" (- b)))", expr("[1+2, \"str\", -b]"))
+assertError("Trying to use ':' in prefix position.", expr, "[1:2]")
+
+-- Subscript
+assertEq("(subscript a [])", expr("a[]"))
+assertEq("(+ 1 (subscript a []))", expr("1+a[]"))
+assertEq("(subscript a [1])", expr("a [1]"))   -- TODO: does it make sense to forbid whitespace?
+assertEq("(subscript a [1])", expr("a[\n1\n]"))
+assertEq("(subscript a (: 1 2))", expr("a[1:2]"))
+assertEq("(subscript a (: 1 _))", expr("a[1:]"))
+assertEq("(subscript a (: _ 2))", expr("a[:2]"))
+assertEq("(subscript a (: _ _))", expr("a[:]"))
+assertError("Unexpected token `term : ,`. Expected `]`", expr, "a[1,2]")
+
 -- Ifs
 assertEq("(if 1 2)", expr("if 1 2"))
 assertEq("(if 1 2)", expr("if (1) 2"))

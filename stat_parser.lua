@@ -79,9 +79,6 @@ function new()
     make_infix("/", 20)
     make_infix("•", 20)
 
-    -- Key-value pair
-    --make_infix(":", 25)
-
     -- Unary ops
     make_prefix("-", 30)
     make_node("-").lbp = 10
@@ -312,6 +309,37 @@ function new()
 
         return pnode
     end
+
+    make_node("]")
+
+    -- Array literal
+    make_node("[").nud = function(self)
+        local pnode = {
+            id = "array",
+            exprs = parser:expr_list_until("]"),
+            format = function(self)
+                return Util.strformat("(array {1})", self.exprs:format())
+            end
+        }
+        return pnode
+    end
+    make_node("[").snud = make_node("[").nud
+
+    make_node(":")
+
+    -- Array subscript
+    make_node("[", 30).led = function(self, left)
+        local pnode = {
+            id = "subscript",
+            first = left,
+            second = parser:slice_expr(),
+            format = function(self)
+                return Util.strformat("(subscript {1} {2})", self.first:format(), self.second:format())
+            end
+        }
+        return pnode
+    end
+    make_node("[").sled = make_node("[").led
 
     return parser
 end

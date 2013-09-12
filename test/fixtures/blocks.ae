@@ -4,11 +4,11 @@
     b - a
 )
 
+var array = [a b c]
+array = [1, 2+3, 4]
+
 // TODO:
-// * list literal
 // * array type parsing
-// * subscript syntax
-// * slice syntax
 
 var a, b, c int
 

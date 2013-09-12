@@ -439,6 +439,61 @@ function new()
         return pnode
     end
 
+    local function slice_right(self)
+        local node = self:pullNode()
+        self.tokenizer.pushToken()
+        if node.id == "]" then
+            return nil
+        end
+        return self:expression()
+    end
+
+    function parser.slice_expr(self)
+        local pnode = {
+            id = "slice",
+            format = function(self)
+                if self.both_ends then
+                    local first = "_"
+                    if self.first then
+                        first = self.first:format()
+                    end
+                    local second = "_"
+                    if self.second then
+                        second = self.second:format()
+                    end
+                    return Util.strformat("(: {1} {2})", first, second)
+                else
+                    local first = "[]"
+                    if self.first then
+                        first = "["..self.first:format().."]"
+                    end
+                    return first
+                end
+            end
+        }
+
+        local node = self:pullNode()
+        if node.id == "]" then
+            return pnode
+        end
+
+        if node.id ~= ":" then
+            self.tokenizer.pushToken()
+            pnode.first = self:expression()
+            node = self:pullNode()
+        end
+
+        if node.id == ":" then
+            pnode.both_ends = true
+            pnode.second = slice_right(self)
+        else
+            self.tokenizer.pushToken()
+        end
+        self:skip("]")
+
+        return pnode
+    end
+
     local symnumber = 1
     local function gensym()
         local str = "sym#"..symnumber
