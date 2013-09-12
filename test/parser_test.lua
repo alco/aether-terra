@@ -168,6 +168,11 @@ assertEq("(var (a:int))", stat("var a: int"))
 assertEq("(var (a:uint (+ 1 2)))", stat("var a: uint = 1 + 2"))
 assertEq("(var (a:int) (b:uint 5) (c:string))", stat("var a: int, b: uint = 5, c: string"))
 
+assertEq("(var (a:[]int))", stat("var a []int"))
+assertEq("(var (a:[4]string))", stat("var a [4]string"))
+assertEq("(var (a:[4][5]int 1))", stat("var a:[4][5]int = 1"))
+assertEq("(var (a:[][]int))", stat("var a [][]int"))
+
 assertEq("(block (var (a 1)) (* a 2) (block (+ 4 3) (- a)))",
          expr("(var a = 1; a * 2; (4 + 3; -a))"))
 assertEq("(block (var (a 1)) (* a 2) (block (+ 4 3) (- a)))",

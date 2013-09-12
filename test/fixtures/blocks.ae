@@ -4,12 +4,6 @@
     b - a
 )
 
-var array = [a b c]
-array = [1, 2+3, 4]
-
-// TODO:
-// * array type parsing
-
 var a, b, c int
 
 // // Which one to choose?
@@ -22,6 +16,11 @@ var e, d string
 var x:int = 1,
     y = 2,
     z:uint
+
+var array = [a b c]
+array = [1, 2+3, 4]
+var ar [1][2][3]int
+var ar: []string = ["a" "b" "c" "d"]
 
 some_func(a b c 1 2)
 other_func(a+b, 2*b, "c")

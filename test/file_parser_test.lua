@@ -16,11 +16,13 @@ end
 
 assertEqList({
     "(block (var (a 1)) (var (b (* a 2))) (- b a))",
-    "(var (array (array (a b c))))",
-    "(= array (array (1 (+ 2 3) 4)))",
     "(var (a:int) (b:int) (c:int))",
     "(var (e:string) (d:string))",
     "(var (x:int 1) (y 2) (z:uint))",
+    "(var (array (array (a b c))))",
+    "(= array (array (1 (+ 2 3) 4)))",
+    "(var (ar:[1][2][3]int))",
+    "(var (ar:[]string (array (\"a\" \"b\" \"c\" \"d\"))))",
     "(funcall some_func (a b c 1 2))",
     "(funcall other_func ((+ a b) (* 2 b) \"c\"))",
     "(= a (if this_is_true (funcall true (value)) (funcall false ())))",

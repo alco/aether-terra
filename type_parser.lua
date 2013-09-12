@@ -18,6 +18,7 @@ function new(parent_parser)
     local make_infix = parser.make_infix
     local make_infix_r = parser.make_infix_r
 
+    parser.make_default_node("int")
     parser.make_default_node("ident")
 
     make_infix("->", 10).led = function(self, left)
@@ -31,6 +32,37 @@ function new(parent_parser)
         }
         return pnode
     end
+
+    make_prefix("[").nud = function(self)
+        -- []int     // dynamic array of ints / slice
+        -- [5]int    // static array of ints / vector
+        -- [4,5]int  // two-dimensional array of ints
+        -- [..2]int  // two-dimensional slice
+        -- [..3]int  // three-dimensional slice
+        -- [4][5]int // array of arrays
+        local pnode = {
+            id = "array",
+            format = function(self)
+                local size = ""
+                if self.size then
+                    size = self.size:format()
+                end
+                return Util.strformat("[{1}]{2}", size, self.elemtype:format())
+            end
+        }
+
+        local node = parser:pullNode()
+        parser.tokenizer.pushToken()
+        if node.id ~= "]" then
+            -- parse number
+            pnode.size = parser:expression()
+        end
+        parser:skip("]")
+
+        pnode.elemtype = parser:expression()
+        return pnode
+    end
+
 
     make_node(")")
     make_prefix("gparen").nud = function(self)
@@ -47,6 +79,7 @@ function new(parent_parser)
     -- some terminator nodes just to stop parsing
     make_node(",")
     make_node("=")
+    make_node("]")
 
     --function table.make_typevar(value)
         --local typevar = make_node("ident")
