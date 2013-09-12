@@ -33,6 +33,7 @@ assertEqList({
     "(= f (fn () 1))",
     "(+ (fn (sym#12 sym#13) (+ sym#12 (* sym#13 sym#13))) 3)",
     "(= f (+ (fn (sym#14 sym#15) (+ sym#14 (* sym#15 sym#15))) 3))",
+    "(= a (if (== x 1) (block 1 2) (if (== x 2) (block 3 4) (if (≥ c 4) (block 5 6)))))",
 }, all_stats("fixtures/blocks.ae"))
 
 assertEqList({
