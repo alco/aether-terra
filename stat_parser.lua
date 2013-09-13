@@ -327,6 +327,25 @@ function new()
 
     make_node(":")
 
+    make_infix("as", 50)
+    --make_node(":", 50).led = function(self, left)
+        --local pnode = {
+            --id = "typecast",
+            --first = left,
+            --second = type_parser:expression(),
+            --format = function(self)
+                --return Util.strformat("({1} {2} {3})", self.id, self.first:format(), self.second:format())
+            --end,
+            --visit = function(self, visitor)
+                --visitor(self)
+                --self.first:visit(visitor)
+                --self.second:visit(visitor)
+            --end
+        --}
+        --return pnode
+    --end
+    --make_node(":").sled = make_node(":").led
+
     -- Array subscript
     make_node("[", 30).led = function(self, left)
         local pnode = {

@@ -51,3 +51,17 @@ assertEqList({
     "(def cub(x) (+ (** x 3) 1))",
 }, all_stats("fixtures/funcs.ae"))
 
+assertEqList({
+    "(var (a 10))",
+    "(funcall assert ((== (funcall typeof (a)) \"int\")))",
+    "(var (b:int8 11))",
+    "(funcall assert ((== (funcall typeof (b)) \"int8\")))",
+    "(var (aa (+ (as a int8) b)) (ab (+ a (as b int))) (ac (+ (as a int16) (as b int16))))",
+    "(funcall assert ((== aa 21)))",
+    "(funcall assert ((== ab 21)))",
+    "(funcall assert ((== ac 21)))",
+    "(funcall assert ((== (funcall typeof (aa)) \"int8\")))",
+    "(funcall assert ((== (funcall typeof (ab)) \"int\")))",
+    "(funcall assert ((== (funcall typeof (ac)) \"int16\")))",
+    "(+ a b)",
+}, all_stats("fixtures/arith.ae"))

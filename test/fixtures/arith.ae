@@ -1,0 +1,17 @@
+var a = 10
+assert(typeof(a) == "int")
+
+var b: int8 = 11
+assert(typeof(b) == "int8")
+
+var aa = a as int8 + b,
+    ab = a + b as int,
+    ac = a as int16 + b as int16
+assert(aa == 21)
+assert(ab == 21)
+assert(ac == 21)
+assert(typeof(aa) == "int8")
+assert(typeof(ab) == "int")
+assert(typeof(ac) == "int16")
+
+a + b  // error: all operands must be of the same type

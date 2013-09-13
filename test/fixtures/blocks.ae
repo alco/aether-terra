@@ -1,3 +1,12 @@
+// TODO:
+// * typechecking for number types
+// * support for string type in runtime
+// * support for array/slice type
+// * for-loop
+// * range syntax
+// * slicing arrays
+// ** type inference
+
 (
     var a = 1
     var b = a * 2
