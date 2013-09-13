@@ -66,6 +66,45 @@ assertEq(errorstr, "Expected end of line. Got `int : 1`")
 
 tt.skip(Tokenizer.makeToken("int", "1"))
 
+fixture_tokens = {
+    { type = "ident", value = "append" },
+    { type = "term", value = "cparen" },
+    { type = "string", value = "a" },
+    { type = "term", value = "," },
+    { type = "string", value = "int" },
+    { type = "term", value = ")" },
+}
+
+-- pull another fixture line
+tt.pullToken()
+tt.pushToken()
+
+for i = 1, #fixture_tokens do
+    tok = tt.peekToken()
+    assertEq(tok.type, fixture_tokens[i].type)
+    assertEq(tok.value, fixture_tokens[i].value)
+
+    tt.skip(Tokenizer.makeToken(tok.type, tok.value))
+end
+
+
+fixture_tokens = {
+    { type = "string", value = "int" },
+}
+
+-- pull another fixture line
+tt.pullToken()
+tt.pushToken()
+
+for i = 1, #fixture_tokens do
+    tok = tt.peekToken()
+    assertEq(tok.type, fixture_tokens[i].type)
+    assertEq(tok.value, fixture_tokens[i].value)
+
+    tt.skip(Tokenizer.makeToken(tok.type, tok.value))
+end
+
+
 assertNil(tt.pullToken())
 assert(tt.atEOF())
 

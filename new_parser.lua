@@ -210,7 +210,7 @@ function new()
     end
 
     local function token_to_node(tok)
-        if node_table[tok.value] then
+        if tok.type ~= "string" and node_table[tok.value] then
             -- it's a keyword
             return new_node(tok, tok.value)
         elseif node_table[tok.type] then

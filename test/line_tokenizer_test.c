@@ -18,6 +18,8 @@ static int readline_lua(lua_State *L)
     static const char *fixtures[] = {
         "-x**(4-2.)",
         "+1",
+        "append(\"a\", \"int\")",
+        "\"int\"",
         NULL
     };
     static int counter;

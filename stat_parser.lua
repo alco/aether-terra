@@ -49,7 +49,7 @@ function new()
 
     ---
 
-    for _, n in G.ipairs({"int", "float", "ident", "string"}) do
+    for _, n in G.ipairs({"int", "float", "ident"}) do
         parser.make_default_node(n)
     end
 

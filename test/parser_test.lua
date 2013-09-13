@@ -69,11 +69,19 @@ assertEq("(* (- 1) 2)", expr("-1 * 2"))
 assertEq("(- (- 1))", expr("- -1"))
 assertEq("(• (/ (- 1) (- (** 2 (- 3)))) (- 4))", expr("-1/-2**-3•-4"))
 
+-- String
+assertEq('""', expr('""'))
+assertEq('"abc efg 123"', expr('"abc efg 123"'))
+assertEq('"abc\tefg\n123"', expr('"abc\\tefg\\n123"'))
+assertEq('"int"', expr('"int"'))
+
 -- Comparisons
 assertEq("(== a (< b c))", expr("a == b < c"))
 assertEq("(≠ (> a b) c)", expr("a > b ≠ c"))
 assertEq("(≥ (≤ a b) c)", expr("a ≤ b ≥ c"))
 assertEq("(== (≠ a b) c)", expr("a ≠ b == c"))
+assertEq('(== "a" "b")', expr('"a" == "b"'))
+assertEq('(≠ "a" "b")', expr('"a" ≠ "b"'))
 
 -- Grouping
 assertEq("1", expr("(1)"))
