@@ -1,17 +1,12 @@
 require("lunit")
 
-local Tokenizer = require("tokenizer")
-local Parser = require("stat_parser")
-local parser = Parser.new()
+local Util = require("util")
+local Compiler = require("compiler")
 
 function all_stats(filename)
-    local tt = Tokenizer.new{ file = filename }
-    parser.tokenizer = tt
-    local list = {}
-    for _, s in ipairs(parser:all_statements()) do
-        table.insert(list, s:format())
-    end
-    return list
+    local compiler = Compiler.new { file = filename }
+    local stats = compiler:parse()
+    return Util.map_format(stats)
 end
 
 assertEqList({
