@@ -73,10 +73,7 @@ function new(opts)
     local first_line, readline_fn
     if opts.line then
         -- line tokenizer
-        if not opts.readline_fn then
-            error("Expected 'readline_fn' option with 'line'")
-        end
-        first_line, readline_fn = opts.line, opts.readline_fn
+        first_line, readline_fn = opts.line, opts.readline_fn or function() end
     elseif opts.file then
         -- file tokenizer
         local lines = io.lines(opts.file)

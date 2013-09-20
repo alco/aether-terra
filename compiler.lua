@@ -11,40 +11,50 @@ setfenv(1, package_env)
 Tokenizer = G.require("tokenizer")
 Parser    = G.require("stat_parser")
 
+function new_parser(opts)
+    local parser = Parser.new()
+    parser.tokenizer = Tokenizer.new(opts)
+    return parser
+end
 
 function new(opts)
-    local compiler = {}
-
     if opts.line and opts.file then
         G.error("Only one of 'line' or 'file' is allowed")
-    elseif opts.line then
-        G.assert(opts.readline_fn)
-    elseif not opts.file then
+    elseif not (opts.file or opts.line) then
         G.error("One of 'line' or 'file' options is required")
     end
 
-    local tt = Tokenizer.new(opts)
-    local par = Parser.new()
-    par.tokenizer = tt
+    local par = new_parser(opts)
 
-    compiler.parse = function(self)
-        self.parse_tree = par:all_statements()
-        return self.parse_tree
-    end
-    compiler.typecheck = function(self)
-        self.ast = typecheck(self.parse_tree)
-        return self.ast
-    end
-    compiler.specialize = function(self)
-        self.specialized_ast = specialize(self.ast)
-        return self.specialized_ast
-    end
-    compiler.codegen = function(self)
-        self.code = codegen(self.specialized_ast)
-        return self.code
-    end
+    return {
+        parse_single_expression = function()
+            return new_parser(opts):expression()
+        end,
 
-    return compiler
+        parse_single_statement = function()
+            return new_parser(opts):statement()
+        end,
+
+        parse = function(self)
+            self.statements = par:all_statements()
+            return self.statements
+        end,
+
+        typecheck = function(self)
+            self.ast = typecheck(self.statements)
+            return self.ast
+        end,
+
+        specialize = function(self)
+            self.specialized_ast = specialize(self.ast)
+            return self.specialized_ast
+        end,
+
+        codegen = function(self)
+            self.code = codegen(self.specialized_ast)
+            return self.code
+        end
+    }
 end
 
 return {

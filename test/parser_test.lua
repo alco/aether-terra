@@ -4,39 +4,33 @@ local Tokenizer = require("tokenizer")
 local Parser = require("stat_parser")
 local parser = Parser.new()
 
-function nilfn()
-end
+local Util = require("util")
+local Compiler = require("compiler")
 
 function expr(line)
-    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
-    parser.tokenizer = tt
-    return parser:expression():format()
+    local compiler = Compiler.new { line = line }
+    return compiler.parse_single_expression():format()
 end
 
 function expr_list(line)
-    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
+    local tt = Tokenizer.new{ line = line }
     parser.tokenizer = tt
     tt.skip("gparen")
     return parser:expr_list_until(")"):format()
 end
 
 function stat(line)
-    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
-    parser.tokenizer = tt
-    local result = parser:statement()
-    if result then
-        return result:format()
+    local compiler = Compiler.new { line = line }
+    local stat = compiler.parse_single_statement()
+    if stat then
+        return stat:format()
     end
 end
 
 function all_stats(line)
-    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
-    parser.tokenizer = tt
-    local list = {}
-    for _, s in ipairs(parser:all_statements()) do
-        table.insert(list, s:format())
-    end
-    return list
+    local compiler = Compiler.new { line = line }
+    local stats = compiler:parse()
+    return Util.map_format(stats)
 end
 
 ---
