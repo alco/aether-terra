@@ -19,6 +19,9 @@ id_fn = function(self)
         format = val_fn,
         visit = function(self, visitor)
             visitor(self)
+        end,
+        typecheck = function(self)
+            return { valtype = self.id }
         end
     }
 end
@@ -84,6 +87,13 @@ function new()
                 visit = function(self, visitor)
                     visitor(self)
                     self.first:visit(visitor)
+                end,
+                typecheck = function(self)
+                    local arg = self.first:typecheck()
+                    if not (arg.valtype == "int" or arg.valtype == "float") then
+                        Util.error("Bad argument type")
+                    end
+                    return { valtype = arg.valtype }
                 end
             }
             return pnode
@@ -106,6 +116,18 @@ function new()
                     visitor(self)
                     self.first:visit(visitor)
                     self.second:visit(visitor)
+                end,
+                typecheck = function(self)
+                    local args = {self.first:typecheck(), self.second:typecheck()}
+                    for _, a in G.ipairs(args) do
+                        if not (a.valtype == "int" or a.valtype == "float") then
+                            Util.error("Bad argument type")
+                        end
+                    end
+                    if args[1].valtype ~= args[2].valtype then
+                        Util.error("Argument types don't match")
+                    end
+                    return { valtype = args[1].valtype }
                 end
             }
             return pnode
