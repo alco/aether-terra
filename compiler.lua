@@ -31,6 +31,12 @@ function new(opts)
             return new_parser(opts):expression()
         end,
 
+        parse_expr_list = function()
+            local parser = new_parser(opts)
+            parser.tokenizer.skip("gparen")
+            return parser:expr_list_until(")")
+        end,
+
         parse_single_statement = function()
             return new_parser(opts):statement()
         end,

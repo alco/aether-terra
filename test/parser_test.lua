@@ -1,9 +1,5 @@
 require("lunit")
 
-local Tokenizer = require("tokenizer")
-local Parser = require("stat_parser")
-local parser = Parser.new()
-
 local Util = require("util")
 local Compiler = require("compiler")
 
@@ -13,10 +9,8 @@ function expr(line)
 end
 
 function expr_list(line)
-    local tt = Tokenizer.new{ line = line }
-    parser.tokenizer = tt
-    tt.skip("gparen")
-    return parser:expr_list_until(")"):format()
+    local compiler = Compiler.new { line = line }
+    return compiler.parse_expr_list():format()
 end
 
 function stat(line)
