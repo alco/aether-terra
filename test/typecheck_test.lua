@@ -35,3 +35,5 @@ assertEq("int", exprtype("1"))
 assertEq("int", exprtype("-1"))
 assertEq("int", exprtype("1-1"))
 assertEq("int", exprtype("1+1"))
+
+--assertEq("int", exprtype("(a = 1; a / 2)"))

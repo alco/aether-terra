@@ -54,6 +54,27 @@ function parse_func(spec)
     return make_func(ret, args)
 end
 
+function make_binop()
+    return function(checker, env, node)
+        local args = Util.map({node.first, node.second}, function(node)
+            return checker:typecheck(node, env)
+        end)
+        local types = Util.map(args, function(arg)
+            return arg.valtype
+        end)
+        local fn = checker:findfunc(env, node.id, types)
+        if not fn then
+            Util.error("No suitable overload for "..node.id.." with arg types "..Util.strjoin(Util.map_format(args), " ").." in "..node:format())
+        end
+        return {
+            id = fn.id,
+            args = args,
+            valtype = fn.valtype,
+            codegen = fn.codegen
+        }
+    end
+end
+
 --
 
 function new_typechecker(env)
@@ -111,7 +132,7 @@ function new_typechecker(env)
             }
         end,
 
-        ["unary -"] = function(checker, env, node)
+        ["neg"] = function(checker, env, node)
             local arg = checker:typecheck(node.first, env)
             local fn = checker:findfunc(env, node.id, {arg.valtype})
             if not fn then
@@ -125,37 +146,10 @@ function new_typechecker(env)
             }
         end,
 
-        ["-"] = function(checker, env, node)
-            local args = Util.map({node.first, node.second}, function(node)
-                return checker:typecheck(node, env)
-            end)
-            local types = Util.map(args, function(arg)
-                return arg.valtype
-            end)
-            local fn = checker:findfunc(env, node.id, types)
-            if not fn then
-                Util.error("No suitable overload for - with arg types "..Util.strjoin(Util.map_format(args), " ").." in "..node:format())
-            end
-            return {
-                id = fn.id,
-                args = args,
-                valtype = fn.valtype,
-            }
-        end,
-
-        ["+"] = function(checker, env, node)
-            local args = { checker:typecheck(node.first, env),
-                           checker:typecheck(node.second, env) }
-            local fn = checker:findfunc(env, node.id, {args[1].valtype, args[2].valtype})
-            if not fn then
-                Util.error("No suitable overload for + with arg types "..args[1]:format().." "..args[2]:format().." in "..node:format())
-            end
-            return {
-                id = fn.id,
-                args = args,
-                valtype = fn.valtype,
-            }
-        end
+        ["-"] = make_binop(),
+        ["+"] = make_binop(),
+        ["*"] = make_binop(),
+        ["/"] = make_binop(),
     }
 
     return checker
@@ -169,6 +163,7 @@ function new(opts)
     end
 
     local neg = parse_func("int -> int")
+    neg.id = "neg"
     neg.codegen = function(self)
         local terra neg(arg: int)
             return -arg
@@ -176,14 +171,48 @@ function new(opts)
         return `neg([self.args[1]:codegen()])
     end
 
+    local add = parse_func("int int -> int")
+    add.id = "+"
+    add.codegen = function(self)
+        local terra add(a: int, b: int)
+            return a + b
+        end
+        return `add([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local sub = parse_func("int int -> int")
+    sub.id = "-"
+    sub.codegen = function(self)
+        local terra sub(a: int, b: int)
+            return a - b
+        end
+        return `sub([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local mul = parse_func("int int -> int")
+    mul.id = "*"
+    mul.codegen = function(self)
+        local terra mul(a: int, b: int)
+            return a * b
+        end
+        return `mul([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local div = parse_func("int int -> int")
+    div.id = "/"
+    div.codegen = function(self)
+        local terra div(a: int, b: int)
+            return a / b
+        end
+        return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
     local builtin_env = {
-        ["unary -"] = { neg },
-        ["-"] = {
-            parse_func("int int -> int")
-        },
-        ["+"] = {
-            parse_func("int int -> int")
-        }
+        ["neg"] = { neg },
+        ["+"] = { add },
+        ["-"] = { sub },
+        ["*"] = { mul },
+        ["/"] = { div },
     }
 
     local par = new_parser(opts)
