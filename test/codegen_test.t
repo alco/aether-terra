@@ -14,4 +14,4 @@ end
 ---
 
 assertEq(1, evalexpr("1"))
---assertEq(-1, evalexpr("-1"))
+assertEq(-1, evalexpr("-1"))

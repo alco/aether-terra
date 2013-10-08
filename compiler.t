@@ -121,6 +121,7 @@ function new_typechecker(env)
                 id = fn.id,
                 args = { arg },
                 valtype = fn.valtype,
+                codegen = fn.codegen,
             }
         end,
 
@@ -167,10 +168,16 @@ function new(opts)
         G.error("One of 'line' or 'file' options is required")
     end
 
+    local neg = parse_func("int -> int")
+    neg.codegen = function(self)
+        local terra neg(arg: int)
+            return -arg
+        end
+        return `neg([self.args[1]:codegen()])
+    end
+
     local builtin_env = {
-        ["unary -"] = {
-            parse_func("int -> int")
-        },
+        ["unary -"] = { neg },
         ["-"] = {
             parse_func("int int -> int")
         },
