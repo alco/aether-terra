@@ -1,7 +1,7 @@
 require("lunit")
 
 local Util = require("util")
-local Compiler = require("compiler")
+local Compiler = terralib.require("compiler")
 
 function expr(line)
     local compiler = Compiler.new { line = line }

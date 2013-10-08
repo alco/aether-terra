@@ -199,7 +199,7 @@ function parseString(str, pos)
 end
 
 function skipLine(str, pos)
-    pso = pos or 1
+    pos = pos or 1
     while pos <= str:len() and str:sub(pos, pos) ~= "\n" do
         pos = pos + 1
     end

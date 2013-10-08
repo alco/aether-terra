@@ -80,8 +80,7 @@ function new()
     make_infix("•", 20)
 
     -- Unary ops
-    make_prefix("-", 30)
-    make_node("-").lbp = 10
+    make_prefix("-", 30, "unary -").lbp = 10
 
     -- Exponentiation
     make_infix_r("↑",  40)

@@ -1,11 +1,13 @@
 require("lunit")
 
 local Util = require("util")
-local Compiler = require("compiler")
+local Compiler = terralib.require("compiler")
 
 function exprtype(line)
     local compiler = Compiler.new { line = line }
-    return compiler.parse_single_expression():typecheck().valtype
+    local expr = compiler.parse_single_expression()
+    local typed_expr = compiler.typecheck_single_expression(expr)
+    return typed_expr.valtype:format()
 end
 
 --function expr_list(line)

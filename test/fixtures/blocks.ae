@@ -7,6 +7,11 @@
 // * slicing arrays
 // ** type inference
 
+// Configurable stages (facade pattern):
+// * function specialization (in: AST, out: transformed AST)
+// * code generation (in: AST, out: terra code)
+// * evaluation (run terra code)
+
 (
     var a = 1
     var b = a * 2

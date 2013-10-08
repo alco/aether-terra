@@ -17,12 +17,11 @@ id_fn = function(self)
         id = self.id,
         value = self.tok.value,
         format = val_fn,
+
+        -- used to rewrite placeholder arguments in anonymous functions
         visit = function(self, visitor)
             visitor(self)
         end,
-        typecheck = function(self)
-            return { valtype = self.id }
-        end
     }
 end
 err_nud_fn = function(self)
@@ -75,26 +74,19 @@ function new()
         return node
     end
 
-    function parser.make_prefix(op, precedence)
+    function parser.make_prefix(op, precedence, other_id)
         local node = parser.make_node(op, precedence)
         node.nud = function(self)
             local pnode = {
-                id = self.id,
+                id = other_id or self.id,
                 first = parser:expression(precedence),
                 format = function(self)
-                    return Util.strformat("({1} {2})", self.id, self.first:format())
+                    return Util.strformat("({1} {2})", op, self.first:format())
                 end,
                 visit = function(self, visitor)
                     visitor(self)
                     self.first:visit(visitor)
                 end,
-                typecheck = function(self)
-                    local arg = self.first:typecheck()
-                    if not (arg.valtype == "int" or arg.valtype == "float") then
-                        Util.error("Bad argument type")
-                    end
-                    return { valtype = arg.valtype }
-                end
             }
             return pnode
         end
@@ -117,18 +109,6 @@ function new()
                     self.first:visit(visitor)
                     self.second:visit(visitor)
                 end,
-                typecheck = function(self)
-                    local args = {self.first:typecheck(), self.second:typecheck()}
-                    for _, a in G.ipairs(args) do
-                        if not (a.valtype == "int" or a.valtype == "float") then
-                            Util.error("Bad argument type")
-                        end
-                    end
-                    if args[1].valtype ~= args[2].valtype then
-                        Util.error("Argument types don't match")
-                    end
-                    return { valtype = args[1].valtype }
-                end
             }
             return pnode
         end
