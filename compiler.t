@@ -179,57 +179,102 @@ function new(opts)
         G.error("One of 'line' or 'file' options is required")
     end
 
-    local neg = parse_func("int -> int")
-    neg.id = "neg"
-    neg.codegen = function(self)
+    local negi = parse_func("int -> int")
+    negi.id = "neg"
+    negi.codegen = function(self)
         local terra neg(arg: int)
             return -arg
         end
         return `neg([self.args[1]:codegen()])
     end
 
-    local add = parse_func("int int -> int")
-    add.id = "+"
-    add.codegen = function(self)
+    local negf = parse_func("float -> float")
+    negf.id = "neg"
+    negf.codegen = function(self)
+        local terra neg(arg: float)
+            return -arg
+        end
+        return `neg([self.args[1]:codegen()])
+    end
+
+    local addi = parse_func("int int -> int")
+    addi.id = "+"
+    addi.codegen = function(self)
         local terra add(a: int, b: int)
             return a + b
         end
         return `add([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
-    local sub = parse_func("int int -> int")
-    sub.id = "-"
-    sub.codegen = function(self)
+    local addf = parse_func("float float -> float")
+    addf.id = "+"
+    addf.codegen = function(self)
+        local terra add(a: float, b: float)
+            return a + b
+        end
+        return `add([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local subi = parse_func("int int -> int")
+    subi.id = "-"
+    subi.codegen = function(self)
         local terra sub(a: int, b: int)
             return a - b
         end
         return `sub([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
-    local mul = parse_func("int int -> int")
-    mul.id = "*"
-    mul.codegen = function(self)
+    local subf = parse_func("float float -> float")
+    subf.id = "-"
+    subf.codegen = function(self)
+        local terra sub(a: float, b: float)
+            return a - b
+        end
+        return `sub([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local muli = parse_func("int int -> int")
+    muli.id = "*"
+    muli.codegen = function(self)
         local terra mul(a: int, b: int)
             return a * b
         end
         return `mul([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
-    local div = parse_func("int int -> int")
-    div.id = "/"
-    div.codegen = function(self)
+    local mulf = parse_func("float float -> float")
+    mulf.id = "*"
+    mulf.codegen = function(self)
+        local terra mul(a: float, b: float)
+            return a * b
+        end
+        return `mul([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local divi = parse_func("int int -> int")
+    divi.id = "/"
+    divi.codegen = function(self)
         local terra div(a: int, b: int)
             return a / b
         end
         return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
+    local divf = parse_func("float float -> float")
+    divf.id = "/"
+    divf.codegen = function(self)
+        local terra div(a: float, b: float)
+            return a / b
+        end
+        return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
     local builtin_env = {
-        ["neg"] = { neg },
-        ["+"] = { add },
-        ["-"] = { sub },
-        ["*"] = { mul },
-        ["/"] = { div },
+        ["neg"] = { negi, negf },
+        ["+"] = { addi, addf },
+        ["-"] = { subi, subf },
+        ["*"] = { muli, mulf },
+        ["/"] = { divi, divf },
     }
 
     local par = new_parser(opts)

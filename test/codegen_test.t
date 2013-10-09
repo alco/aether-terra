@@ -32,4 +32,12 @@ assertEq(0, evalexpr("0."))
 assertEq(0.1, evalexpr("0.1"))
 assertEq(1, evalexpr("1.0"))
 
+assertEq(-1, evalexpr("-1.0"))
+assertEq(-1, evalexpr("1.0 - 2.0"))
+assertEq(2, evalexpr("1.0 + 1.0"))
+assertEq(2.75, evalexpr("1.5 + 1.25"))
+assertEq(0.25, evalexpr("1.5 - 1.25"))
+assertEq(1.875, evalexpr("1.5 * 1.25"))
+assertEq(3, evalexpr("1.5 / 0.5"))
+
 --assertEq(0, evalexpr("a = 1; a / 2"))
