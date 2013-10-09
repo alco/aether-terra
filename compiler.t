@@ -157,10 +157,32 @@ function new_typechecker(env)
         float = make_numeric_lit("float"),
         block = function(checker, env, node)
             -- FIXME: create new scope
+            local stats = terralib.newlist()
             local st
             for _, s in ipairs(node.stats) do
-                st = checker.typecheck(s, env)
+                st = checker:typecheck(s, env)
+                stats:insert(st)
             end
+            return {
+                id = "block",
+                valtype = st.valtype,
+                codegen = function(self)
+                    if self.valtype.name == "void" then
+                        return stats:map(function(self)
+                            return self:codegen()
+                        end)
+                    else
+                        stats:remove(#stats)
+                        return quote
+                            [ stats:map(function(self)
+                                return self:codegen()
+                            end) ]
+                        in
+                            [ st:codegen() ]
+                        end
+                    end
+                end
+            }
         end,
         ["neg"] = make_unaryop(),
         ["-"] = make_binop(),

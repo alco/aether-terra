@@ -38,4 +38,10 @@ assertEq("int", exprtype("1+1"))
 
 assertEq("float", exprtype("1.0"))
 assertEq("float", exprtype("1.0+1.0"))
+
+assertEq("float", exprtype("(1 + 1; 2.5)"))
+
+--assertEq("void", exprtype("(var a; a = 2.5)"))
+--assertEq("float", exprtype("(var a; a = 2.5; a)"))
+
 --assertEq("int", exprtype("(a = 1; a / 2)"))
