@@ -77,6 +77,7 @@ function new(parent_parser)
     end
 
     -- some terminator nodes just to stop parsing
+    make_node(";")
     make_node(",")
     make_node("=")
     make_node("]")
