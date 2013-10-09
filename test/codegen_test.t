@@ -7,7 +7,7 @@ function evalexpr(line)
     local expr = compiler.parse_single_expression()
     local typed_expr = compiler.typecheck_single_expression(expr)
     local terra_fn = compiler.codegen_single_expression(typed_expr)
-    terra_fn:printpretty()
+    --terra_fn:printpretty()
     return terra_fn()
 end
 
@@ -28,5 +28,8 @@ assertEq(0, evalexpr("-0+1-0-1+0+0"))
 
 assertEq(-18, evalexpr("(1 + (2 - 10) * 7) / 3"))
 
+assertEq(0, evalexpr("0."))
+assertEq(0.1, evalexpr("0.1"))
+assertEq(1, evalexpr("1.0"))
 
 --assertEq(0, evalexpr("a = 1; a / 2"))

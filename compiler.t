@@ -54,6 +54,37 @@ function parse_func(spec)
     return make_func(ret, args)
 end
 
+--
+
+function make_numeric_lit(typ)
+    return function(_checker, _env, node)
+        return {
+            id = node.id,
+            value = node.value,
+            valtype = make_prim(typ),
+            codegen = function(self)
+                local num = G.tonumber(self.value)
+                return `num
+            end
+        }
+    end
+end
+
+function make_unaryop()
+    return function(checker, env, node)
+        local arg = checker:typecheck(node.first, env)
+        local fn = checker:findfunc(env, node.id, {arg.valtype})
+        if not fn then
+            Util.error("No suitable overload for "..node.id.." with arg type "..arg.valtype:format().." in "..node:format())
+        end
+        return {
+            id = fn.id,
+            args = { arg },
+            valtype = fn.valtype,
+            codegen = fn.codegen,
+        }
+    end
+end
 function make_binop()
     return function(checker, env, node)
         local args = Util.map({node.first, node.second}, function(node)
@@ -64,7 +95,10 @@ function make_binop()
         end)
         local fn = checker:findfunc(env, node.id, types)
         if not fn then
-            Util.error("No suitable overload for "..node.id.." with arg types "..Util.strjoin(Util.map_format(args), " ").." in "..node:format())
+            local typstrings = Util.map(args, function(arg)
+                return arg.valtype:format()
+            end)
+            Util.error("No suitable overload for "..node.id.." with arg types "..Util.strjoin(typstrings, " ").." in "..node:format())
         end
         return {
             id = fn.id,
@@ -102,7 +136,6 @@ function new_typechecker(env)
                     local success = true
                     for i, ty in G.ipairs(cand.argtypes) do
                         if not types_agree(args[i], ty) then
-                            G.print("types don't agree = "..args[i])
                             success = false
                             break
                         end
@@ -120,32 +153,16 @@ function new_typechecker(env)
     }
 
     checker.table = {
-        int = function(_checker, _env, node)
-            return {
-                id = node.id,
-                value = node.value,
-                valtype = make_prim("int"),
-                codegen = function(self)
-                    local num = G.tonumber(self.value)
-                    return `num
-                end
-            }
-        end,
-
-        ["neg"] = function(checker, env, node)
-            local arg = checker:typecheck(node.first, env)
-            local fn = checker:findfunc(env, node.id, {arg.valtype})
-            if not fn then
-                Util.error("No suitable overload for - with arg type "..arg.valtype:format().." in "..node:format())
+        int = make_numeric_lit("int"),
+        float = make_numeric_lit("float"),
+        block = function(checker, env, node)
+            -- FIXME: create new scope
+            local st
+            for _, s in ipairs(node.stats) do
+                st = checker.typecheck(s, env)
             end
-            return {
-                id = fn.id,
-                args = { arg },
-                valtype = fn.valtype,
-                codegen = fn.codegen,
-            }
         end,
-
+        ["neg"] = make_unaryop(),
         ["-"] = make_binop(),
         ["+"] = make_binop(),
         ["*"] = make_binop(),
