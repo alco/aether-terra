@@ -192,20 +192,19 @@ function new_typechecker(env)
                 id = "block",
                 valtype = st.valtype,
                 codegen = function(self)
-                    local expr
-                    if self.valtype == "void" then
-                        expr = `nil
-                    else
-                        stats:remove(#stats)
-                        expr = st:codegen()
-                    end
                     local mapped = stats:map(function(self)
                         return self:codegen()
                     end)
-                    return quote
-                        [ mapped ]
-                    in
-                        [ expr ]
+                    if self.valtype == "void" then
+                        return mapped
+                    else
+                        local expr = mapped[#mapped]
+                        mapped:remove(#mapped)
+                        return quote
+                            mapped
+                        in
+                            [expr]
+                        end
                     end
                 end
             }
@@ -237,15 +236,9 @@ function new_typechecker(env)
                             Util.error("Could not infer the type for variable "..v.name.value)
                         end
                         local sym = env[v.name.value].sym
-                        vars:insert(quote
-                            var [sym] : parse_terratype(v.typ)
-                        end)
+                        vars:insert(quote var [sym] : parse_terratype(v.typ) end)
                     end
-                    return quote
-                        [vars]
-                    in
-                        nil
-                    end
+                    return `[vars]
                 end
             }
         end,
@@ -271,11 +264,7 @@ function new_typechecker(env)
                 valtype = "void",
                 codegen = function(self)
                     local sym = variable.sym
-                    return quote
-                        [sym] = [val:codegen()]
-                    in
-                        nil
-                    end
+                    return quote [sym] = [val:codegen()] end
                 end
             }
         end,
@@ -406,8 +395,14 @@ function new(opts)
         end,
 
         codegen_single_expression = function(expr)
+            local code = expr:codegen()
+            if expr.valtype == "void" then
+                code = quote code end
+            else
+                code = quote return code end
+            end
             local terra fn()
-                return [ expr:codegen() ]
+                code
             end
             return fn
         end,
