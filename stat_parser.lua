@@ -178,6 +178,7 @@ function new()
     -- Variable declaration
     make_node("var").snud = function(self)
         local pnode = {
+            id = "var",
             varlist = parser:var_list_with_sep(","),
             format = function(self)
                 return Util.strformat("(var {1})", self.varlist:format())
@@ -189,6 +190,7 @@ function new()
             -- try to parse the type spec
             local typ = type_parser:expression()
             for _, v in G.ipairs(pnode.varlist.vars) do
+                -- FIXME: what about "var a:int string"?
                 v.typ = typ
             end
         end

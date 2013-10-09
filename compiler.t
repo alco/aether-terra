@@ -24,6 +24,24 @@ end
 
 --
 
+function parse_terratype(typ)
+    typ = typ:format()
+    if typ == "int" then
+        return int
+    elseif typ == "float" then
+        return float
+    end
+    Util.error("Unhandled type "..typ)
+end
+
+function parse_type(typ)
+    typ = typ:format()
+    if typ == "int" or typ == "float" then
+        return make_prim(typ)
+    end
+    Util.error("Cannot parse type "..typ)
+end
+
 function make_prim(name)
     return {
         structure = "primitive",
@@ -119,7 +137,7 @@ function new_typechecker(env)
             env = env or self.env
             local typecheck_fn = self.table[expr.id]
             if not typecheck_fn then
-                Util.error("No typechecking for "..expr:format())
+                Util.error("No typechecking for "..expr.id.." in "..expr:format())
             end
             return typecheck_fn(self, env, expr)
         end,
@@ -155,6 +173,13 @@ function new_typechecker(env)
     checker.table = {
         int = make_numeric_lit("int"),
         float = make_numeric_lit("float"),
+        ident = function(checker, env, node)
+            local variable = env[node.value]
+            if not variable then
+                Util.error("Undefined variable "..node.value)
+            end
+            return variable
+        end,
         block = function(checker, env, node)
             -- FIXME: create new scope
             local stats = terralib.newlist()
@@ -167,19 +192,89 @@ function new_typechecker(env)
                 id = "block",
                 valtype = st.valtype,
                 codegen = function(self)
-                    if self.valtype.name == "void" then
-                        return stats:map(function(self)
-                            return self:codegen()
-                        end)
+                    local expr
+                    if self.valtype == "void" then
+                        expr = `nil
                     else
                         stats:remove(#stats)
-                        return quote
-                            [ stats:map(function(self)
-                                return self:codegen()
-                            end) ]
-                        in
-                            [ st:codegen() ]
+                        expr = st:codegen()
+                    end
+                    local mapped = stats:map(function(self)
+                        return self:codegen()
+                    end)
+                    return quote
+                        [ mapped ]
+                    in
+                        [ expr ]
+                    end
+                end
+            }
+        end,
+        ["var"] = function(checker, env, node)
+            -- FIXME check that env does not already contain declared vars
+            for _, v in ipairs(node.varlist.vars) do
+                local variable = {
+                    name = v.name.value,
+                    codegen = function(self)
+                        return self.sym
+                    end
+                }
+                if v.typ then
+                    variable.valtype = parse_type(v.typ)
+                    variable.sym = symbol(parse_terratype(v.typ), v.name.value)
+                else
+                    variable.sym = symbol(v.name.value)
+                end
+                env[v.name.value] = variable
+            end
+            return {
+                id = node.id,
+                valtype = "void",
+                codegen = function(self)
+                    local vars = terralib.newlist()
+                    for _, v in ipairs(node.varlist.vars) do
+                        if not v.typ then
+                            Util.error("Could not infer the type for variable "..v.name.value)
                         end
+                        local sym = env[v.name.value].sym
+                        vars:insert(quote
+                            var [sym] : parse_terratype(v.typ)
+                        end)
+                    end
+                    return quote
+                        [vars]
+                    in
+                        nil
+                    end
+                end
+            }
+        end,
+        ["="] = function(checker, env, node)
+            local variable = env[node.name.value]
+            if not variable then
+                Util.error("Undefined variable "..node.name.value)
+            end
+
+            local val = checker:typecheck(node.value, env)
+
+            if val.valtype and variable.valtype and not types_agree(val.valtype, variable.valtype) then
+                Util.error("Conflicting types in assignment: "..val.valtype:format().." and "..variable.valtype:format())
+            elseif not variable.valtype then
+                variable.valtype = val.valtype
+            end
+            if not val.valtype and not variable.valtype then
+                Util.error("No type information in assignment")
+            end
+
+            return {
+                id = node.id,
+                valtype = "void",
+                codegen = function(self)
+                    local sym = variable.sym
+                    return quote
+                        [sym] = [val:codegen()]
+                    in
+                        nil
                     end
                 end
             }

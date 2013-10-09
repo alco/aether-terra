@@ -41,7 +41,8 @@ assertEq("float", exprtype("1.0+1.0"))
 
 assertEq("float", exprtype("(1 + 1; 2.5)"))
 
---assertEq("void", exprtype("(var a; a = 2.5)"))
---assertEq("float", exprtype("(var a; a = 2.5; a)"))
-
---assertEq("int", exprtype("(a = 1; a / 2)"))
+assertEq("void", exprtype("(var a int)"))
+assertError("Conflicting types in assignment: float and int", exprtype, "(var a int; a = 2.5)")
+assertEq("void", exprtype("(var a float; a = 2.5)"))
+assertEq("void", exprtype("(var a; a = 2.5)"))
+assertEq("float", exprtype("(var a; a = 2.5; a)"))
