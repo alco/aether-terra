@@ -23,6 +23,8 @@ end
 
 function assertError(errstr, fn, ...)
     local status, err = pcall(fn, ...)
-    assertEq(status, false)
+    if status then
+        error("Expected the call to fail with `"..errstr.."`")
+    end
     assertEq(err, errstr)
 end
