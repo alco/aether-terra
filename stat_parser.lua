@@ -146,6 +146,19 @@ function new()
     make_node("gparen").snud = make_node("gparen").nud
     make_node("cparen").snud = make_node("gparen").snud
 
+    -- Vectors
+    make_node("❯")
+    make_node("❮").nud = function(self)
+        local pnode = {
+            id = "vector",
+            args = parser:expr_list_until("❯"),
+            format = function(self)
+                return Util.strformat("(vector {1})", self.args:format())
+            end
+        }
+        return pnode
+    end
+
     -- Funcalls
     make_node("cparen", 1).led = function(self, left)
         local pnode = {

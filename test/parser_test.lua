@@ -230,3 +230,7 @@ assertError("Trying to use 'def' in prefix position.", expr, "def sin(x)")
 assertError("Unexpected 'gparen'. Expected 'ident'", stat, "def (sin(x))")
 assertError("Unexpected end of input", stat, "def x")
 assertError("Unexpected 'int'. Expected 'cparen'", stat, "def x 1")
+
+-- Vectors
+assertEq("(• 1 2)", expr("1 • 2"))
+assertEq("(• (vector (1 2 3)) (vector (4 5 6)))", expr("❮1 2 3❯ • ❮4 5 6❯"))

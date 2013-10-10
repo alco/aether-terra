@@ -58,3 +58,7 @@ assertEq("int", exprtype("(var a:float = 2.5, b:int = -1; b)"))
 assertEq("float", exprtype("2 as float"))
 assertEq("int", exprtype("2.1 as int"))
 assertEq("float", exprtype("(var a:float = 2; a)"))
+
+assertEq("(3)int", exprtype("❮1 2 3❯"))
+assertEq("(3)float", exprtype("❮1.0 2.0 3.0❯"))
+

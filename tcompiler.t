@@ -22,6 +22,11 @@ local function type_is_convertible(ty1, ty2)
         or (ty1 == "float" and ty2 == "int")
 end
 
+local function valid_type_for_vector(typ)
+    typ = typ:format()
+    return typ == "int" or typ == "float"
+end
+
 --
 
 local function parse_terratype(typ)
@@ -30,6 +35,8 @@ local function parse_terratype(typ)
         return int
     elseif typ == "float" then
         return float
+    elseif typ == "(3)int" then
+        return int[3]
     end
     Util.error("Unhandled type "..typ)
 end
@@ -55,6 +62,17 @@ local function make_prim(name)
         name = name,
         format = function(self)
             return self.name
+        end
+    }
+end
+
+local function make_vector(len, elemtype)
+    return {
+        structure = "vector",
+        len = len,
+        elemtype = elemtype,
+        format = function(self)
+            return Util.strformat("({1}){2}", self.len, self.elemtype:format())
         end
     }
 end
@@ -191,6 +209,36 @@ local function new_typechecker(env)
     checker.table = {
         ["int"] = make_numeric_lit("int"),
         ["float"] = make_numeric_lit("float"),
+        ["vector"] = function(checker, env, node)
+            if #node.args.exprs == 0 then
+                Util.error("Empty vector does not make sense")
+            end
+
+            local args = Util.map(node.args.exprs, function(self)
+                return checker:typecheck(self, env)
+            end)
+            local common_type = args[1].valtype
+            if not valid_type_for_vector(common_type) then
+                Util.error("Unsupported vector element type. Has to be a scalar")
+            end
+            for _, a in ipairs(args) do
+                if not types_agree(common_type, a.valtype) then
+                    Util.error("All vector elements have to be of the same type")
+                end
+            end
+
+            return {
+                id = node.id,
+                valtype = make_vector(#args, common_type),
+                codegen = function(self)
+                    local terra_type = parse_terratype(common_type)
+                    local targs = Util.map(args, function(self)
+                        return self:codegen()
+                    end)
+                    return `arrayof(terra_type, targs)
+                end
+            }
+        end,
         ["ident"] = function(checker, env, node)
             local variable = env[node.value]
             if not variable then
@@ -225,15 +273,11 @@ local function new_typechecker(env)
                         return self:codegen()
                     end)
                     if self.valtype == "void" then
-                        return mapped
+                        return quote mapped end
                     else
                         local expr = mapped[#mapped]
                         mapped:remove(#mapped)
-                        return quote
-                            mapped
-                        in
-                            [expr]
-                        end
+                        return quote mapped in [expr] end
                     end
                 end
             }
@@ -324,6 +368,7 @@ local function new_typechecker(env)
         ["+"] = make_binop(),
         ["*"] = make_binop(),
         ["/"] = make_binop(),
+        ["•"] = make_binop(),
     }
 
     return checker
@@ -420,12 +465,31 @@ function new(opts)
         return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
+    local doti = parse_func("(3)int (3)int -> int")
+    doti.id = "dot"
+    doti.codegen = function(self)
+        local terra dot3(a: int[3], b: int[3])
+            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+        end
+        return `dot3([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
+    local dotf = parse_func("(3)float (3)float -> float")
+    dotf.id = "dot"
+    dotf.codegen = function(self)
+        local terra dot3(a: float[3], b: float[3])
+            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+        end
+        return `dot3([self.args[1]:codegen()], [self.args[2]:codegen()])
+    end
+
     local builtin_env = {
         ["neg"] = { negi, negf },
         ["+"] = { addi, addf },
         ["-"] = { subi, subf },
         ["*"] = { muli, mulf },
         ["/"] = { divi, divf },
+        ["•"] = { doti, dotf },
     }
 
     local compiler = Compiler.new(opts)
