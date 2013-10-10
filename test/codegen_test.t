@@ -8,7 +8,7 @@ function evalexpr(line)
     local typed_expr = compiler.typecheck_single_expression(expr)
     local terra_fn = compiler.codegen_single_expression(typed_expr)
     --terra_fn:printpretty()
-    terra_fn:disas()
+    --terra_fn:disas()
     --print("***********")
     return terra_fn()
 end
