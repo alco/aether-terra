@@ -12,16 +12,14 @@ local function types_agree(ty1, ty2)
     return ty1:format() == ty2:format()
 end
 
---
-
-local function make_prim(name)
-    return {
-        structure = "primitive",
-        name = name,
-        format = function(self)
-            return self.name
-        end
-    }
+local function type_is_convertible(ty1, ty2)
+    if types_agree(ty1, ty2) then
+        return true
+    end
+    ty1 = ty1:format()
+    ty2 = ty2:format()
+    return (ty1 == "int" and ty2 == "float")
+        or (ty1 == "float" and ty2 == "int")
 end
 
 --
@@ -35,6 +33,33 @@ local function parse_terratype(typ)
     end
     Util.error("Unhandled type "..typ)
 end
+
+--
+
+local function make_conversion(val, typ)
+    return {
+        id = "as",
+        valtype = typ,
+        codegen = function(self)
+            local terratyp = parse_terratype(typ)
+            local v = val:codegen()
+            return `[terratyp](v)
+        end
+    }
+end
+
+
+local function make_prim(name)
+    return {
+        structure = "primitive",
+        name = name,
+        format = function(self)
+            return self.name
+        end
+    }
+end
+
+--
 
 local function parse_type(typ)
     typ = typ:format()
@@ -164,9 +189,9 @@ local function new_typechecker(env)
     }
 
     checker.table = {
-        int = make_numeric_lit("int"),
-        float = make_numeric_lit("float"),
-        ident = function(checker, env, node)
+        ["int"] = make_numeric_lit("int"),
+        ["float"] = make_numeric_lit("float"),
+        ["ident"] = function(checker, env, node)
             local variable = env[node.value]
             if not variable then
                 Util.error("Undefined variable "..node.value)
@@ -176,7 +201,15 @@ local function new_typechecker(env)
             end
             return variable
         end,
-        block = function(checker, env, node)
+        ["as"] = function(checker, env, node)
+            local val = checker:typecheck(node.first, env)
+            local typ = parse_type(node.second)
+            if not type_is_convertible(val.valtype, typ) then
+                Util.error("No conversion from "..val.valtype:format().." to "..typ.name)
+            end
+            return make_conversion(val, typ)
+        end,
+        ["block"] = function(checker, env, node)
             -- FIXME: create new scope
             local stats = terralib.newlist()
             local st
@@ -226,10 +259,10 @@ local function new_typechecker(env)
                 end
                 if v.value then
                     local val = checker:typecheck(v.value, env)
-                    if variable.valtype and not types_agree(variable.valtype, val.valtype) then
+                    if variable.valtype and not type_is_convertible(variable.valtype, val.valtype) then
                         Util.error("Conflicting types in initialization")
                     end
-                    variable.value = val
+                    variable.value = make_conversion(val, variable.valtype)
                 end
                 env[v.name.value] = variable
             end
@@ -262,7 +295,7 @@ local function new_typechecker(env)
 
             local val = checker:typecheck(node.value, env)
 
-            if val.valtype and variable.valtype and not types_agree(val.valtype, variable.valtype) then
+            if val.valtype and variable.valtype and not type_is_convertible(val.valtype, variable.valtype) then
                 Util.error("Conflicting types in assignment: "..val.valtype:format().." and "..variable.valtype:format())
             elseif not variable.valtype then
                 variable.valtype = val.valtype
@@ -275,6 +308,7 @@ local function new_typechecker(env)
                 id = node.id,
                 valtype = "void",
                 codegen = function(self)
+                    local val = make_conversion(val, variable.valtype)
                     local sym = variable.sym
                     return quote [sym] = [val:codegen()] end
                 end
