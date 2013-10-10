@@ -207,6 +207,10 @@ local function new_typechecker(env)
         end,
         ["var"] = function(checker, env, node)
             -- FIXME check that env does not already contain declared vars
+            local varnode = {
+                id = node.id,
+                valtype = "void",
+            }
             for _, v in ipairs(node.varlist.vars) do
                 local variable = {
                     name = v.name.value,
@@ -229,28 +233,26 @@ local function new_typechecker(env)
                 end
                 env[v.name.value] = variable
             end
-            return {
-                id = node.id,
-                valtype = "void",
-                codegen = function(self)
-                    local vars = terralib.newlist()
-                    for _, v in ipairs(node.varlist.vars) do
-                        if not v.typ then
-                            Util.error("Could not infer the type for variable "..v.name.value)
-                        end
-                        local variable = env[v.name.value]
-                        local sym = variable.sym
-                        if variable.value then
-                            vars:insert(quote
-                                var [sym] : parse_terratype(v.typ) = [ variable.value:codegen() ]
-                            end)
-                        else
-                            vars:insert(quote var [sym] : parse_terratype(v.typ) end)
-                        end
+            varnode.codegen = function(self)
+                local vars = terralib.newlist()
+                for _, v in ipairs(node.varlist.vars) do
+                    local variable = env[v.name.value]
+                    if not variable.valtype then
+                        Util.error("Unknown type for variable "..v.name.value)
                     end
-                    return `[vars]
+                    local typ = parse_terratype(variable.valtype:format())
+                    local sym = variable.sym
+                    if variable.value then
+                        vars:insert(quote
+                            var [sym] : typ = [ variable.value:codegen() ]
+                        end)
+                    else
+                        vars:insert(quote var [sym] : typ end)
+                    end
                 end
-            }
+                return `[vars]
+            end
+            return varnode
         end,
         ["="] = function(checker, env, node)
             local variable = env[node.name.value]

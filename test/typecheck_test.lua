@@ -51,3 +51,6 @@ assertError("Conflicting types in initialization", exprtype, "(var a = 2 float)"
 assertError("Conflicting types in initialization", exprtype, "(var a:float = 2)")
 assertEq("void", exprtype("(var a:int = 2)"))
 assertEq("void", exprtype("(var a = 2.0 float)"))
+
+assertEq("float", exprtype("(var a:float = 2.5, b:int = -1; a)"))
+assertEq("int", exprtype("(var a:float = 2.5, b:int = -1; b)"))

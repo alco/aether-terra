@@ -50,7 +50,10 @@ assertEq(nil, evalexpr("(var a float; a = 2.5)"))
 assertEq(2.5, evalexpr("(var a float; a = 2.5; a)"))
 assertEq(1.5, evalexpr("(var a, b float; a = 2.5; b = -1.0; a + b)"))
 assertEq(1.5, evalexpr("(var a = 2.5, b = -1.0 float; a + b)"))
+assertEq(2.5, evalexpr("(var a:float = 2.5, b:int = -1; a)"))
+assertEq(-1, evalexpr("(var a:float = 2.5, b:int = -1; b)"))
 
 assertError("Could not infer type for variable a", evalexpr, "(var a; a)")
 
---assertEq(nil, evalexpr("(var a; a = 2.5)"))
+assertEq(nil, evalexpr("(var a; a = 2.5)"))
+assertEq(2.5, evalexpr("(var a; a = 2.5; a)"))
