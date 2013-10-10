@@ -259,10 +259,15 @@ local function new_typechecker(env)
                 end
                 if v.value then
                     local val = checker:typecheck(v.value, env)
-                    if variable.valtype and not type_is_convertible(variable.valtype, val.valtype) then
-                        Util.error("Conflicting types in initialization")
+                    if variable.valtype then
+                        if not type_is_convertible(variable.valtype, val.valtype) then
+                            Util.error("Conflicting types in initialization")
+                        end
+                        variable.value = make_conversion(val, variable.valtype)
+                    else
+                        variable.valtype = val.valtype
+                        variable.value = val
                     end
-                    variable.value = make_conversion(val, variable.valtype)
                 end
                 env[v.name.value] = variable
             end

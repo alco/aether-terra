@@ -63,6 +63,7 @@ assertEq(2, evalexpr("2.1 as int"))
 assertEq(2.0, evalexpr("(var a:float = 2; a)"))
 
 assertEq(2.5, evalexpr("(var a int; var b = 2.5; b)"))
-assertEq(2, evalexpr("(var a int; var b = 2.5; a = b; a)"))
+assertEq(2, evalexpr("(var a int; var b = 2.5; a = b; a)"))  -- FIXME: add compiler option to forbid implicit truncation
+assertEq(2, evalexpr("(var a int; var b = 2.5; a = b as int; a)"))
 
 -- FIXME: turn each test into a terra function
