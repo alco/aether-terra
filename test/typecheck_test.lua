@@ -59,6 +59,8 @@ assertEq("float", exprtype("2 as float"))
 assertEq("int", exprtype("2.1 as int"))
 assertEq("float", exprtype("(var a:float = 2; a)"))
 
+assertError("Empty vector does not make sense", exprtype, "❮❯")
+assertEq("(1)int", exprtype("❮100❯"))
 assertEq("(2)int", exprtype("❮1 2❯"))
 assertEq("(3)int", exprtype("❮1 2 3❯"))
 assertEq("(3)float", exprtype("❮1.0 2.0 3.0❯"))

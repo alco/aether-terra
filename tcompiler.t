@@ -8,12 +8,52 @@ local Util     = require("util")
 
 --
 
-local function types_agree(ty1, ty2)
-    return ty1:format() == ty2:format()
+local function table_size(t)
+    local count = 0
+    for _ in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
+local function set_param(params, param, value)
+    if params[param] and params[param] ~= value then
+        return false
+    end
+    params[param] = value
+    return true
+end
+
+local function match_type(tpat, typ, params)
+    --print("Matching ")
+    --Util.table_print(typ)
+    --print(" against ")
+    --Util.table_print(tpat)
+
+    params = params or {}
+    for k, v in pairs(tpat) do
+        if type(v) == "table" then
+            if v.param then
+                if not set_param(params, v.param, typ[k]) then
+                    Util.error("Failed to match "..typ:format().." against "..tpat:format())
+                end
+            else
+                if not match_type(v, typ[k], params) then
+                    return false
+                end
+            end
+        elseif k ~= "format" and k ~= "codegen" then
+            if v ~= typ[k] then
+                return false
+            end
+        end
+    end
+    return params
 end
 
 local function type_is_convertible(ty1, ty2)
-    if types_agree(ty1, ty2) then
+    --print("***Calling match_type in is_convertible***")
+    if match_type(ty1, ty2) then
         return true
     end
     ty1 = ty1:format()
@@ -72,7 +112,11 @@ local function make_vector(len, elemtype)
         len = len,
         elemtype = elemtype,
         format = function(self)
-            return Util.strformat("({1}){2}", self.len, self.elemtype:format())
+            local len = self.len
+            if type(len) == "table" then
+                len = len.param
+            end
+            return Util.strformat("({1}){2}", len, self.elemtype:format())
         end
     }
 end
@@ -83,6 +127,13 @@ local function parse_type(typ)
     typ = typ:format()
     if typ == "int" or typ == "float" then
         return make_prim(typ)
+    elseif string.match(typ, "%((%w)%)(%w+)") then
+        local len, elemtype = string.match(typ, "%((%w)%)(%w+)")
+        if tonumber(len) then
+            return make_vector(tonumber(len), parse_type(elemtype))
+        else
+            return make_vector({ param = len }, parse_type(elemtype))
+        end
     end
     Util.error("Cannot parse type "..typ)
 end
@@ -101,9 +152,9 @@ local function parse_func(spec)
         return Util.strtrim(str)
     end)
     local args = Util.map(Util.strsplit(comps[1]), function(str)
-        return Util.strtrim(str)
+        return parse_type(Util.strtrim(str))
     end)
-    local ret = comps[2]
+    local ret = parse_type(comps[2])
     return make_func(ret, args)
 end
 
@@ -187,14 +238,19 @@ local function new_typechecker(env)
             local result = {}
             for _, cand in ipairs(candidates) do
                 if cand.nargs == #args then
-                    local success = true
-                    for i, ty in ipairs(cand.argtypes) do
-                        if not types_agree(args[i], ty) then
-                            success = false
-                            break
+                    local fake_type = make_func(cand.valtype, args)
+                    fake_type.id = cand.id
+                    --print("***Calling match_type in findfunc***")
+                    local params = match_type(cand, fake_type)
+                    --print("***Result is nil: "..tostring(not params).."***")
+                    if params then
+                        if table_size(params) > 0 then
+                            cand = {
+                                id = cand.id,
+                                valtype = cand.valtype,
+                                codegen = cand.codegen(params)  -- Resolve parameters
+                            }
                         end
-                    end
-                    if success then
                         table.insert(result, cand)
                     end
                 end
@@ -222,7 +278,8 @@ local function new_typechecker(env)
                 Util.error("Unsupported vector element type. Has to be a scalar")
             end
             for _, a in ipairs(args) do
-                if not types_agree(common_type, a.valtype) then
+                --print("***Calling match_type in vector***")
+                if not match_type(common_type, a.valtype) then
                     Util.error("All vector elements have to be of the same type")
                 end
             end
@@ -465,22 +522,36 @@ function new(opts)
         return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
-    local doti = parse_func("(3)int (3)int -> int")
+    local doti = parse_func("(N)int (N)int -> int")
     doti.id = "dot"
-    doti.codegen = function(self)
-        local terra dot3(a: int[3], b: int[3])
-            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    doti.codegen = function(params)
+        local N = params["N"]
+        return function(self)
+            local terra dotN(a: int[N], b: int[N])
+                var result: int = 0
+                for i = 0, N do
+                    result = result + a[i] * b[i]
+                end
+                return result
+            end
+            return `dotN([self.args[1]:codegen()], [self.args[2]:codegen()])
         end
-        return `dot3([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
-    local dotf = parse_func("(3)float (3)float -> float")
+    local dotf = parse_func("(N)float (N)float -> float")
     dotf.id = "dot"
-    dotf.codegen = function(self)
-        local terra dot3(a: float[3], b: float[3])
-            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    dotf.codegen = function(params)
+        local N = params["N"]
+        return function(self)
+            local terra dotN(a: float[N], b: float[N])
+                var result: float = 0
+                for i = 0, N do
+                    result = result + a[i] * b[i]
+                end
+                return result
+            end
+            return `dotN([self.args[1]:codegen()], [self.args[2]:codegen()])
         end
-        return `dot3([self.args[1]:codegen()], [self.args[2]:codegen()])
     end
 
     local builtin_env = {

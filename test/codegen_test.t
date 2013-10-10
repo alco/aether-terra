@@ -71,9 +71,13 @@ assertEq(2.5, evalexpr("(var a int; (var b = 2.5); b)")) -- FIXME: leaking scope
 -- Vectors
 assertError("No suitable overload for • with arg types int int in (• 1 2)", evalexpr, "1 • 2")
 
---assertEq(14, evalexpr("❮1 2❯ • ❮4 5❯"))
+assertEq(-10, evalexpr("❮10❯ • ❮-1❯"))
+assertEq(14, evalexpr("❮1 2❯ • ❮4 5❯"))
 assertEq(32, evalexpr("❮1 2 3❯ • ❮4 5 6❯"))
 assertEq(32, evalexpr("(var a = ❮1 2 3❯, b = ❮4 5 6❯; a • b)"))
 assertEq(188.15625, evalexpr("❮0.125 0.5 0.25❯ • ❮100.5 200.75 300.875❯"))
+assertEq(3.75, evalexpr("❮1.5❯ • ❮2.5❯"))
+
+assertError("Failed to match (3)int against (N)float", evalexpr, "❮0.1 0.2❯ • ❮3 4 5❯")
 
 -- FIXME: turn each test into a terra function
