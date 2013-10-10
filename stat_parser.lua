@@ -186,7 +186,7 @@ function new()
         }
 
         local tok = parser.tokenizer.peekToken()
-        if tok and tok.value ~= "nl" and tok.value ~= ";" then -- FIXME: too complicated
+        if tok and tok.value ~= "nl" and tok.value ~= ";" and tok.value ~= ")" then -- FIXME: too complicated
             -- try to parse the type spec
             local typ = type_parser:expression()
             for _, v in G.ipairs(pnode.varlist.vars) do
