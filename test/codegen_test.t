@@ -1,6 +1,6 @@
 require("lunit")
 
-local Compiler = terralib.require("compiler")
+local Compiler = terralib.require("tcompiler")
 
 function evalexpr(line)
     local compiler = Compiler.new { line = line }
@@ -49,5 +49,8 @@ assertEq(nil, evalexpr("(var a int)"))
 assertEq(nil, evalexpr("(var a float; a = 2.5)"))
 assertEq(2.5, evalexpr("(var a float; a = 2.5; a)"))
 assertEq(1.5, evalexpr("(var a, b float; a = 2.5; b = -1.0; a + b)"))
+assertEq(1.5, evalexpr("(var a = 2.5, b = -1.0 float; a + b)"))
+
+assertError("Could not infer type for variable a", evalexpr, "(var a; a)")
 
 --assertEq(nil, evalexpr("(var a; a = 2.5)"))

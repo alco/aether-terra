@@ -1,7 +1,7 @@
 require("lunit")
 
 local Util = require("util")
-local Compiler = terralib.require("compiler")
+local Compiler = require("compiler")
 
 function expr(line)
     local compiler = Compiler.new { line = line }
@@ -163,6 +163,10 @@ assertEq("(var (a:int) (b:int) (c:int))", stat("var a, b, c int"))
 assertEq("(var (a:int))", stat("var a: int"))
 assertEq("(var (a:uint (+ 1 2)))", stat("var a: uint = 1 + 2"))
 assertEq("(var (a:int) (b:uint 5) (c:string))", stat("var a: int, b: uint = 5, c: string"))
+
+assertEq("(block (var (a:int)))", stat("(var a: int)"))
+assertEq("(block (var (a:uint (+ 1 2))))", stat("(var a: uint = 1 + 2)"))
+assertEq("(block (var (a:int) (b:uint 5) (c:string)))", stat("(var a: int, b: uint = 5, c: string)"))
 
 assertEq("(var (a:[]int))", stat("var a []int"))
 assertEq("(var (a:[4]string))", stat("var a [4]string"))

@@ -1,7 +1,7 @@
 require("lunit")
 
-local Util = require("util")
-local Compiler = terralib.require("compiler")
+--local Util = require("util")
+local Compiler = terralib.require("tcompiler")
 
 function exprtype(line)
     local compiler = Compiler.new { line = line }
@@ -46,3 +46,8 @@ assertError("Conflicting types in assignment: float and int", exprtype, "(var a 
 assertEq("void", exprtype("(var a float; a = 2.5)"))
 assertEq("void", exprtype("(var a; a = 2.5)"))
 assertEq("float", exprtype("(var a; a = 2.5; a)"))
+assertError("Could not infer type for variable a", exprtype, "(var a; a)")
+assertError("Conflicting types in initialization", exprtype, "(var a = 2 float)")
+assertError("Conflicting types in initialization", exprtype, "(var a:float = 2)")
+assertEq("void", exprtype("(var a:int = 2)"))
+assertEq("void", exprtype("(var a = 2.0 float)"))

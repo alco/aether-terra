@@ -1,7 +1,7 @@
 require("lunit")
 
 local Util = require("util")
-local Compiler = terralib.require("compiler")
+local Compiler = require("compiler")
 
 function all_stats(filename)
     local compiler = Compiler.new { file = filename }

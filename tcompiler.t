@@ -1,48 +1,20 @@
----------------------------
--- ** Aether Compiler ** --
----------------------------
-
--- Prevent modifications to global environment
-local G = _G
-local package_env = {}
---setfenv(1, package_env)
+-----------------------------------------------------------
+-- ** Aether Compiler With Type Checking and Code Gen ** --
+-----------------------------------------------------------
 
 
-Tokenizer = G.require("tokenizer")
-Parser    = G.require("stat_parser")
-Util      = G.require("util")
+local Compiler = require("compiler")
+local Util     = require("util")
 
-function new_parser(opts)
-    local parser = Parser.new()
-    parser.tokenizer = Tokenizer.new(opts)
-    return parser
-end
+--
 
-function types_agree(ty1, ty2)
+local function types_agree(ty1, ty2)
     return ty1:format() == ty2:format()
 end
 
 --
 
-function parse_terratype(typ)
-    typ = typ:format()
-    if typ == "int" then
-        return int
-    elseif typ == "float" then
-        return float
-    end
-    Util.error("Unhandled type "..typ)
-end
-
-function parse_type(typ)
-    typ = typ:format()
-    if typ == "int" or typ == "float" then
-        return make_prim(typ)
-    end
-    Util.error("Cannot parse type "..typ)
-end
-
-function make_prim(name)
+local function make_prim(name)
     return {
         structure = "primitive",
         name = name,
@@ -52,7 +24,27 @@ function make_prim(name)
     }
 end
 
-function make_func(ret, args)
+--
+
+local function parse_terratype(typ)
+    typ = typ:format()
+    if typ == "int" then
+        return int
+    elseif typ == "float" then
+        return float
+    end
+    Util.error("Unhandled type "..typ)
+end
+
+local function parse_type(typ)
+    typ = typ:format()
+    if typ == "int" or typ == "float" then
+        return make_prim(typ)
+    end
+    Util.error("Cannot parse type "..typ)
+end
+
+local function make_func(ret, args)
     return {
         structure = "function",
         nargs = #args,
@@ -61,7 +53,7 @@ function make_func(ret, args)
     }
 end
 
-function parse_func(spec)
+local function parse_func(spec)
     local comps = Util.map(Util.strsplit(spec, "->"), function(str)
         return Util.strtrim(str)
     end)
@@ -74,21 +66,21 @@ end
 
 --
 
-function make_numeric_lit(typ)
+local function make_numeric_lit(typ)
     return function(_checker, _env, node)
         return {
             id = node.id,
             value = node.value,
             valtype = make_prim(typ),
             codegen = function(self)
-                local num = G.tonumber(self.value)
+                local num = tonumber(self.value)
                 return `num
             end
         }
     end
 end
 
-function make_unaryop()
+local function make_unaryop()
     return function(checker, env, node)
         local arg = checker:typecheck(node.first, env)
         local fn = checker:findfunc(env, node.id, {arg.valtype})
@@ -103,7 +95,8 @@ function make_unaryop()
         }
     end
 end
-function make_binop()
+
+local function make_binop()
     return function(checker, env, node)
         local args = Util.map({node.first, node.second}, function(node)
             return checker:typecheck(node, env)
@@ -129,7 +122,7 @@ end
 
 --
 
-function new_typechecker(env)
+local function new_typechecker(env)
     local checker = {
         env = env,
 
@@ -149,17 +142,17 @@ function new_typechecker(env)
             end
 
             local result = {}
-            for _, cand in G.ipairs(candidates) do
+            for _, cand in ipairs(candidates) do
                 if cand.nargs == #args then
                     local success = true
-                    for i, ty in G.ipairs(cand.argtypes) do
+                    for i, ty in ipairs(cand.argtypes) do
                         if not types_agree(args[i], ty) then
                             success = false
                             break
                         end
                     end
                     if success then
-                        G.table.insert(result, cand)
+                        table.insert(result, cand)
                     end
                 end
             end
@@ -177,6 +170,9 @@ function new_typechecker(env)
             local variable = env[node.value]
             if not variable then
                 Util.error("Undefined variable "..node.value)
+            end
+            if not variable.valtype then
+                Util.error("Could not infer type for variable "..variable.name)
             end
             return variable
         end,
@@ -224,6 +220,13 @@ function new_typechecker(env)
                 else
                     variable.sym = symbol(v.name.value)
                 end
+                if v.value then
+                    local val = checker:typecheck(v.value, env)
+                    if variable.valtype and not types_agree(variable.valtype, val.valtype) then
+                        Util.error("Conflicting types in initialization")
+                    end
+                    variable.value = val
+                end
                 env[v.name.value] = variable
             end
             return {
@@ -235,8 +238,15 @@ function new_typechecker(env)
                         if not v.typ then
                             Util.error("Could not infer the type for variable "..v.name.value)
                         end
-                        local sym = env[v.name.value].sym
-                        vars:insert(quote var [sym] : parse_terratype(v.typ) end)
+                        local variable = env[v.name.value]
+                        local sym = variable.sym
+                        if variable.value then
+                            vars:insert(quote
+                                var [sym] : parse_terratype(v.typ) = [ variable.value:codegen() ]
+                            end)
+                        else
+                            vars:insert(quote var [sym] : parse_terratype(v.typ) end)
+                        end
                     end
                     return `[vars]
                 end
@@ -279,12 +289,6 @@ function new_typechecker(env)
 end
 
 function new(opts)
-    if opts.line and opts.file then
-        G.error("Only one of 'line' or 'file' is allowed")
-    elseif not (opts.file or opts.line) then
-        G.error("One of 'line' or 'file' options is required")
-    end
-
     local negi = parse_func("int -> int")
     negi.id = "neg"
     negi.codegen = function(self)
@@ -383,127 +387,25 @@ function new(opts)
         ["/"] = { divi, divf },
     }
 
-    local par = new_parser(opts)
-
-    return {
-        parse_single_expression = function()
-            return new_parser(opts):expression()
-        end,
-
-        typecheck_single_expression = function(expr)
-            return new_typechecker(builtin_env):typecheck(expr)
-        end,
-
-        codegen_single_expression = function(expr)
-            local code = expr:codegen()
-            if expr.valtype == "void" then
-                code = quote code end
-            else
-                code = quote return code end
-            end
-            local terra fn()
-                code
-            end
-            return fn
-        end,
-
-        parse_expr_list = function()
-            local parser = new_parser(opts)
-            parser.tokenizer.skip("gparen")
-            return parser:expr_list_until(")")
-        end,
-
-        parse_single_statement = function()
-            return new_parser(opts):statement()
-        end,
-
-        parse = function(self)
-            self.statements = par:all_statements()
-            return self.statements
-        end,
-
-        typecheck = function(self)
-            self.ast = typecheck(self.statements)
-            return self.ast
-        end,
-
-        specialize = function(self)
-            self.specialized_ast = specialize(self.ast)
-            return self.specialized_ast
-        end,
-
-        codegen = function(self)
-            self.code = codegen(self.specialized_ast)
-            return self.code
+    local compiler = Compiler.new(opts)
+    compiler.typecheck_single_expression = function(expr)
+        return new_typechecker(builtin_env):typecheck(expr)
+    end
+    compiler.codegen_single_expression = function(expr)
+        local code = expr:codegen()
+        if expr.valtype == "void" then
+            code = quote code end
+        else
+            code = quote return code end
         end
-    }
+        local terra fn()
+            code
+        end
+        return fn
+    end
+    return compiler
 end
 
 return {
     new = new
 }
-
---function expression(line)
---    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
---    parser.tokenizer = tt
---    return parser:expression():format()
---end
---
---function expr_list(line)
---    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
---    parser.tokenizer = tt
---    tt.skip("gparen")
---    return parser:expr_list_until(")"):format()
---end
---
---function stat(line)
---    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
---    parser.tokenizer = tt
---    local result = parser:statement()
---    if result then
---        return result:format()
---    end
---end
---
---function all_stats(line)
---    local tt = Tokenizer.new{ line = line, readline_fn = nilfn }
---    parser.tokenizer = tt
---    local list = {}
---    for _, s in ipairs(parser:all_statements()) do
---        table.insert(list, s:format())
---    end
---    return list
---end
---
---
---val_fn = function(self)
---    return self.value
---end
---id_fn = function(self)
---    return {
---        id = self.id,
---        value = self.tok.value,
---        format = val_fn,
---        visit = function(self, visitor)
---            visitor(self)
---        end
---    }
---end
---err_nud_fn = function(self)
---    Util.error("Trying to use '"..self.id.."' in prefix position.")
---end
---err_led_fn = function(self, left)
---    Util.error("Trying to use '"..self.id.."' in infix position after '"..left.id.."'.")
---end
---err_snud_fn = function(self)
---    Util.error("Trying to use '"..self.id.."' in statement position.")
---end
---err_sled_fn = function(self, left)
---    Util.error("Trying to use '"..self.id.."' in statement position after '"..left.id.."'.")
---end
---
---
---function new()
---    local node_table = {}
---    local parser = { node_table = node_table }
---
