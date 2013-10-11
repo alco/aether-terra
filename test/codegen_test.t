@@ -98,6 +98,13 @@ assertEq(false, evalexpr("0 < 0"))
 assertEq(true, evalexpr("0 ≤ 0"))
 assertEq(false, evalexpr("0 ≠ 0"))
 
+assertEq(false, evalexpr("0 == 0 and 2 > 3"))
+assertEq(false, evalexpr("0 > 0 or false"))
+assertEq(true, evalexpr("0 > 0 or true"))
+assertEq(false, evalexpr("true and false"))
+assertEq(true, evalexpr("false and false or true"))
+assertEq(false, evalexpr("false and (false or true)"))
+
 assertEq(true, evalexpr("1.1 == 1.1"))
 assertEq(true, evalexpr("1.21 > 1.20"))
 

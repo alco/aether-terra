@@ -72,4 +72,8 @@ assertEq("bool", exprtype("0 < 0"))
 assertEq("bool", exprtype("0 ≤ 0"))
 assertEq("bool", exprtype("0 ≠ 0"))
 
+assertEq("bool", exprtype("0 == 0 and 2 > 3"))
+assertEq("bool", exprtype("0 > 0 or false"))
+assertEq("bool", exprtype("true and false"))
+
 assertError("No suitable overload for > with arg types int float in (> 1 2.0)", exprtype, "1 > 2.0")

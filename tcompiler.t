@@ -394,6 +394,24 @@ local function new_typechecker(env)
     checker.table = {
         ["int"] = make_numeric_lit("int"),
         ["float"] = make_numeric_lit("float"),
+        ["true"] = function(checker, env, node)
+            return {
+                id = node.id,
+                valtype = make_prim("bool"),
+                codegen = function(self)
+                    return `true
+                end
+            }
+        end,
+        ["false"] = function(checker, env, node)
+            return {
+                id = node.id,
+                valtype = make_prim("bool"),
+                codegen = function(self)
+                    return `false
+                end
+            }
+        end,
         ["vector"] = function(checker, env, node)
             if #node.args.exprs == 0 then
                 Util.error("Empty vector does not make sense")
@@ -548,20 +566,14 @@ local function new_typechecker(env)
                     return quote [sym] = [val:codegen()] end
                 end
             }
-        end,
-        ["neg"] = make_unaryop(),
-        ["-"] = make_binop(),
-        ["+"] = make_binop(),
-        ["*"] = make_binop(),
-        ["/"] = make_binop(),
-        ["•"] = make_binop(),
-        ["=="] = make_binop(),
-        [">"] = make_binop(),
-        ["≥"] = make_binop(),
-        ["<"] = make_binop(),
-        ["≤"] = make_binop(),
-        ["≠"] = make_binop(),
+        end
     }
+    for _, unop in ipairs({"neg"}) do
+        checker.table[unop] = make_unaryop()
+    end
+    for _, binop in ipairs({ "-", "+", "*", "/", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or" }) do
+        checker.table[binop] = make_binop()
+    end
 
     return checker
 end
@@ -630,6 +642,8 @@ function new(opts)
         ["<"] = make_binop_impl("<", arith_types, "bool", macro(function(a, b) return `a < b end)),
         ["≤"] = make_binop_impl("≤", arith_types, "bool", macro(function(a, b) return `a <= b end)),
         ["≠"] = make_binop_impl("≠", arith_types, "bool", macro(function(a, b) return `a ~= b end)),
+        ["and"] = make_binop_impl("and", {"bool"}, "bool", macro(function(a, b) return `a and b end)),
+        ["or"] = make_binop_impl("or", {"bool"}, "bool", macro(function(a, b) return `a or b end)),
     }
 
     local compiler = Compiler.new(opts)

@@ -49,7 +49,7 @@ function new()
 
     ---
 
-    for _, n in G.ipairs({"int", "float", "ident"}) do
+    for _, n in G.ipairs({"int", "float", "ident", "true", "false"}) do
         parser.make_default_node(n)
     end
 
@@ -65,6 +65,9 @@ function new()
     make_node("string").snud = make_node("string").nud
 
     -- Comparisons
+    make_infix("and", 7)
+    make_infix("or", 6)
+
     make_infix("==", 8)
     make_infix("≠",  8)
     make_infix("<",  9)
