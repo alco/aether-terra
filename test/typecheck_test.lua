@@ -65,3 +65,11 @@ assertEq("(2)int", exprtype("❮1 2❯"))
 assertEq("(3)int", exprtype("❮1 2 3❯"))
 assertEq("(3)float", exprtype("❮1.0 2.0 3.0❯"))
 
+assertEq("bool", exprtype("0 == 0"))
+assertEq("bool", exprtype("0 > 0"))
+assertEq("bool", exprtype("0 ≥ 0"))
+assertEq("bool", exprtype("0 < 0"))
+assertEq("bool", exprtype("0 ≤ 0"))
+assertEq("bool", exprtype("0 ≠ 0"))
+
+assertError("No suitable overload for > with arg types int float in (> 1 2.0)", exprtype, "1 > 2.0")

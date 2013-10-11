@@ -75,7 +75,9 @@ local function parse_terratype(typ)
         return int
     elseif typ == "float" then
         return float
-    elseif typ == "(3)int" then
+    elseif typ == "bool" then
+        return bool
+    elseif typ == "(3)int" then -- FIXME
         return int[3]
     end
     Util.error("Unhandled type "..typ)
@@ -125,7 +127,7 @@ end
 
 local function parse_type(typ)
     typ = typ:format()
-    if typ == "int" or typ == "float" then
+    if typ == "int" or typ == "float" or typ == "bool" then
         return make_prim(typ)
     elseif string.match(typ, "%((%w)%)(%w+)") then
         local len, elemtype = string.match(typ, "%((%w)%)(%w+)")
@@ -190,6 +192,24 @@ local function make_unaryop()
     end
 end
 
+local function make_unaryop_impl(id, types, retype, op)
+    local clauses = {}
+    for _, tstr in ipairs(types) do
+        local typ = parse_terratype(tstr)
+        local sig = Util.strformat("{1} -> {2}", tstr, retype or tstr)
+        local opnode = parse_func(sig)
+        opnode.id = id
+        opnode.codegen = function(self)
+            local terra fn(a: typ)
+                return [op(a)]
+            end
+            return `fn([self.args[1]:codegen()])
+        end
+        table.insert(clauses, opnode)
+    end
+    return clauses
+end
+
 local function make_binop()
     return function(checker, env, node)
         local args = Util.map({node.first, node.second}, function(node)
@@ -212,6 +232,24 @@ local function make_binop()
             codegen = fn.codegen
         }
     end
+end
+
+local function make_binop_impl(id, types, retype, op)
+    local clauses = {}
+    for _, tstr in ipairs(types) do
+        local typ = parse_terratype(tstr)
+        local sig = Util.strformat("{1} {1} -> {2}", tstr, retype or tstr)
+        local opnode = parse_func(sig)
+        opnode.id = id
+        opnode.codegen = function(self)
+            local terra fn(a: typ, b: typ)
+                return [op(a, b)]
+            end
+            return `fn([self.args[1]:codegen()], [self.args[2]:codegen()])
+        end
+        table.insert(clauses, opnode)
+    end
+    return clauses
 end
 
 --
@@ -426,102 +464,18 @@ local function new_typechecker(env)
         ["*"] = make_binop(),
         ["/"] = make_binop(),
         ["•"] = make_binop(),
+        ["=="] = make_binop(),
+        [">"] = make_binop(),
+        ["≥"] = make_binop(),
+        ["<"] = make_binop(),
+        ["≤"] = make_binop(),
+        ["≠"] = make_binop(),
     }
 
     return checker
 end
 
 function new(opts)
-    local negi = parse_func("int -> int")
-    negi.id = "neg"
-    negi.codegen = function(self)
-        local terra neg(arg: int)
-            return -arg
-        end
-        return `neg([self.args[1]:codegen()])
-    end
-
-    local negf = parse_func("float -> float")
-    negf.id = "neg"
-    negf.codegen = function(self)
-        local terra neg(arg: float)
-            return -arg
-        end
-        return `neg([self.args[1]:codegen()])
-    end
-
-    local addi = parse_func("int int -> int")
-    addi.id = "+"
-    addi.codegen = function(self)
-        local terra add(a: int, b: int)
-            return a + b
-        end
-        return `add([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local addf = parse_func("float float -> float")
-    addf.id = "+"
-    addf.codegen = function(self)
-        local terra add(a: float, b: float)
-            return a + b
-        end
-        return `add([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local subi = parse_func("int int -> int")
-    subi.id = "-"
-    subi.codegen = function(self)
-        local terra sub(a: int, b: int)
-            return a - b
-        end
-        return `sub([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local subf = parse_func("float float -> float")
-    subf.id = "-"
-    subf.codegen = function(self)
-        local terra sub(a: float, b: float)
-            return a - b
-        end
-        return `sub([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local muli = parse_func("int int -> int")
-    muli.id = "*"
-    muli.codegen = function(self)
-        local terra mul(a: int, b: int)
-            return a * b
-        end
-        return `mul([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local mulf = parse_func("float float -> float")
-    mulf.id = "*"
-    mulf.codegen = function(self)
-        local terra mul(a: float, b: float)
-            return a * b
-        end
-        return `mul([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local divi = parse_func("int int -> int")
-    divi.id = "/"
-    divi.codegen = function(self)
-        local terra div(a: int, b: int)
-            return a / b
-        end
-        return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
-    local divf = parse_func("float float -> float")
-    divf.id = "/"
-    divf.codegen = function(self)
-        local terra div(a: float, b: float)
-            return a / b
-        end
-        return `div([self.args[1]:codegen()], [self.args[2]:codegen()])
-    end
-
     local doti = parse_func("(N)int (N)int -> int")
     doti.id = "dot"
     doti.codegen = function(params)
@@ -554,13 +508,20 @@ function new(opts)
         end
     end
 
+    local arith_types = {"int", "float"}
     local builtin_env = {
-        ["neg"] = { negi, negf },
-        ["+"] = { addi, addf },
-        ["-"] = { subi, subf },
-        ["*"] = { muli, mulf },
-        ["/"] = { divi, divf },
+        ["neg"] = make_unaryop_impl("neg", arith_types, nil, function(a) return `-a end),
+        ["+"] = make_binop_impl("+", arith_types, nil, function(a, b) return `a + b end),
+        ["-"] = make_binop_impl("-", arith_types, nil, function(a, b) return `a - b end),
+        ["*"] = make_binop_impl("*", arith_types, nil, function(a, b) return `a * b end),
+        ["/"] = make_binop_impl("/", arith_types, nil, function(a, b) return `a / b end),
         ["•"] = { doti, dotf },
+        ["=="] = make_binop_impl("==", arith_types, "bool", function(a, b) return `a == b end),
+        [">"] = make_binop_impl(">", arith_types, "bool", function(a, b) return `a > b end),
+        ["≥"] = make_binop_impl("≥", arith_types, "bool", function(a, b) return `a >= b end),
+        ["<"] = make_binop_impl("<", arith_types, "bool", function(a, b) return `a < b end),
+        ["≤"] = make_binop_impl("≤", arith_types, "bool", function(a, b) return `a <= b end),
+        ["≠"] = make_binop_impl("≠", arith_types, "bool", function(a, b) return `a ~= b end),
     }
 
     local compiler = Compiler.new(opts)

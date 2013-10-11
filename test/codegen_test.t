@@ -81,3 +81,22 @@ assertEq(3.75, evalexpr("❮1.5❯ • ❮2.5❯"))
 assertError("Failed to match (3)int against (N)float", evalexpr, "❮0.1 0.2❯ • ❮3 4 5❯")
 
 -- FIXME: turn each test into a terra function
+
+assertEq(true, evalexpr("0 == 0"))
+assertEq(false, evalexpr("0 > 0"))
+assertEq(true, evalexpr("0 ≥ 0"))
+assertEq(false, evalexpr("0 < 0"))
+assertEq(true, evalexpr("0 ≤ 0"))
+assertEq(false, evalexpr("0 ≠ 0"))
+
+assertEq(true, evalexpr("1.1 == 1.1"))
+assertEq(true, evalexpr("1.21 > 1.20"))
+
+-- NaN
+assertEq(false, evalexpr("0.0/0.0 == 0.0/0.0"))
+assertEq(false, evalexpr("0.0/0.0 > 0.0/0.0"))
+assertEq(false, evalexpr("0.0/0.0 ≥ 0.0/0.0"))
+assertEq(false, evalexpr("0.0/0.0 < 0.0/0.0"))
+assertEq(false, evalexpr("0.0/0.0 ≤ 0.0/0.0"))
+assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
+
