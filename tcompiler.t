@@ -280,6 +280,8 @@ local function make_binop_impl(id, types, retype, op)
             local terra fn(a: typ, b: typ)
                 return op(a, b)
             end
+            --print("Impl for "..id)
+            --fn:printpretty()
             return `fn([self.args[1]:codegen()], [self.args[2]:codegen()])
         end
         table.insert(clauses, opnode)
@@ -571,7 +573,7 @@ local function new_typechecker(env)
     for _, unop in ipairs({"neg"}) do
         checker.table[unop] = make_unaryop()
     end
-    for _, binop in ipairs({ "-", "+", "*", "/", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or" }) do
+    for _, binop in ipairs({ "-", "+", "*", "/", "mod", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or", "band", "bor", "<<" }) do
         checker.table[binop] = make_binop()
     end
 
@@ -629,12 +631,17 @@ function new(opts)
     local divs = make_binop_impl("/", arith_types, nil, div_fn)
     table_concat(divs, make_binop_vector_impl("/", arith_types, div_fn))
 
+    local mod_fn = macro(function(a, b) return `a % b end)
+    local mods = make_binop_impl("mod", {"int"}, nil, mod_fn)
+    table_concat(mods, make_binop_vector_impl("mod", {"int"}, mod_fn))
+
     local builtin_env = {
         ["neg"] = make_unaryop_impl("neg", arith_types, nil, macro(function(a) return `-a end)),
         ["+"] = adds,
         ["-"] = subs,
         ["*"] = muls,
         ["/"] = divs,
+        ["mod"] = mods,
         ["•"] = { doti, dotf },
         ["=="] = make_binop_impl("==", arith_types, "bool", macro(function(a, b) return `a == b end)),
         [">"] = make_binop_impl(">", arith_types, "bool", macro(function(a, b) return `a > b end)),
@@ -644,6 +651,9 @@ function new(opts)
         ["≠"] = make_binop_impl("≠", arith_types, "bool", macro(function(a, b) return `a ~= b end)),
         ["and"] = make_binop_impl("and", {"bool"}, "bool", macro(function(a, b) return `a and b end)),
         ["or"] = make_binop_impl("or", {"bool"}, "bool", macro(function(a, b) return `a or b end)),
+        ["band"] = make_binop_impl("band", {"int"}, "int", macro(function(a, b) return `a and b end)),
+        ["bor"] = make_binop_impl("bor", {"int"}, "int", macro(function(a, b) return `a or b end)),
+        ["<<"] = make_binop_impl("<<", {"int"}, "int", macro(function(a, b) return `a << b end)),
     }
 
     local compiler = Compiler.new(opts)

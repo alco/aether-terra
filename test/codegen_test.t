@@ -2,14 +2,16 @@ require("lunit")
 
 local Compiler = terralib.require("tcompiler")
 
-function evalexpr(line)
+function evalexpr(line, printcode)
     local compiler = Compiler.new { line = line }
     local expr = compiler.parse_single_expression()
     local typed_expr = compiler.typecheck_single_expression(expr)
     local terra_fn = compiler.codegen_single_expression(typed_expr)
-    --terra_fn:printpretty()
-    --terra_fn:disas()
-    --print("***********")
+    if printcode then
+        terra_fn:printpretty()
+        terra_fn:disas()
+        print("***********")
+    end
     return terra_fn()
 end
 
@@ -115,3 +117,15 @@ assertEq(false, evalexpr("0.0/0.0 ≥ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 < 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≤ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
+
+-- More complex blocks
+assertEq(9044106, evalexpr([[
+(
+    var MODULO = 65521
+    var a = 1, b = 0
+    //for byte in bytes {
+        a = (a + 137) mod MODULO
+        b = (b + a) mod MODULO
+    //}
+    (b << 16) bor a
+)]], true))

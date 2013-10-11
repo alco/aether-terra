@@ -80,7 +80,14 @@ function new()
     make_infix("-", 10)
     make_infix("*", 20)
     make_infix("/", 20)
+    make_infix("mod", 20)
     make_infix("•", 20)
+
+    -- Bitwise
+    make_infix("<<", 20)
+    make_infix(">>", 20)
+    make_infix("band", 20)
+    make_infix("bor", 20)
 
     -- Unary ops
     make_prefix("-", 30, "neg").lbp = 10
