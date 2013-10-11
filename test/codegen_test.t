@@ -71,6 +71,15 @@ assertEq(2.5, evalexpr("(var a int; (var b = 2.5); b)")) -- FIXME: leaking scope
 -- Vectors
 assertError("No suitable overload for • with arg types int int in (• 1 2)", evalexpr, "1 • 2")
 
+assertEq(9, evalexpr("(❮10❯ + ❮-1❯) • ❮1❯"))
+assertEq(30, evalexpr("(❮10 8❯ + ❮-1, 13❯) • ❮1 1❯"))
+assertEq(29, evalexpr("(❮10.0 8.0❯ + ❮-1.5, 12.5❯) • ❮1.0 1.0❯"))
+
+assertEq(5, evalexpr("(❮10 8 4❯ - ❮-1, 13, 5❯) • ❮1 1 1❯"))
+assertEq(1+4+9+16, evalexpr("(❮1 2 3 4❯ * ❮1 2 3 4❯) • ❮1 1 1 1❯"))
+assertEq(0+1+1+2, evalexpr("(❮1 2 3 4❯ / ❮2 2 2 2❯) • ❮1 1 1 1❯"))
+assertEq(0.5+1+1.5+2, evalexpr("(❮1.0 2.0 3.0 4.0❯ / ❮2.0 2.0 2.0 2.0❯) • ❮1.0 1.0 1.0 1.0❯"))
+
 assertEq(-10, evalexpr("❮10❯ • ❮-1❯"))
 assertEq(14, evalexpr("❮1 2❯ • ❮4 5❯"))
 assertEq(32, evalexpr("❮1 2 3❯ • ❮4 5 6❯"))
@@ -99,4 +108,3 @@ assertEq(false, evalexpr("0.0/0.0 ≥ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 < 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≤ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
-

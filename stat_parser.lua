@@ -158,6 +158,7 @@ function new()
         }
         return pnode
     end
+    make_node("❮").snud = make_node("❮").nud
 
     -- Funcalls
     make_node("cparen", 1).led = function(self, left)

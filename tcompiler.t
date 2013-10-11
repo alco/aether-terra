@@ -16,6 +16,15 @@ local function table_size(t)
     return count
 end
 
+local function table_concat(t1, t2)
+    local len1 = #t1
+    for i = 1,#t2 do
+        t1[len1 + i] = t2[i]
+    end
+end
+
+--
+
 local function set_param(params, param, value)
     if params[param] and params[param] ~= value then
         return false
@@ -50,6 +59,32 @@ local function match_type(tpat, typ, params)
     end
     return params
 end
+
+local function reify_type_into(typ, params, newtype)
+    for k, v in pairs(typ) do
+        if type(v) == "table" then
+            if v.param then
+                if not params[v.param] then
+                    Util.error("Could not resolve type parameter "..v.param)
+                end
+                newtype[k] = params[v.param]
+            else
+                local subtype = {}
+                reify_type_into(v, params, subtype)
+                newtype[k] = subtype
+            end
+        else
+            newtype[k] = v
+        end
+    end
+end
+
+local function reify_type(typ, params)
+    local newtype = {}
+    reify_type_into(typ, params, newtype)
+    return newtype
+end
+
 
 local function type_is_convertible(ty1, ty2)
     --print("***Calling match_type in is_convertible***")
@@ -201,7 +236,7 @@ local function make_unaryop_impl(id, types, retype, op)
         opnode.id = id
         opnode.codegen = function(self)
             local terra fn(a: typ)
-                return [op(a)]
+                return op(a)
             end
             return `fn([self.args[1]:codegen()])
         end
@@ -243,9 +278,34 @@ local function make_binop_impl(id, types, retype, op)
         opnode.id = id
         opnode.codegen = function(self)
             local terra fn(a: typ, b: typ)
-                return [op(a, b)]
+                return op(a, b)
             end
             return `fn([self.args[1]:codegen()], [self.args[2]:codegen()])
+        end
+        table.insert(clauses, opnode)
+    end
+    return clauses
+end
+
+function make_binop_vector_impl(id, types, op)
+    local clauses = {}
+    for _, tstr in ipairs(types) do
+        local typ = parse_terratype(tstr)
+        local sig = Util.strformat("(N){1} (N){1} -> (N){1}", tstr)
+        local opnode = parse_func(sig)
+        opnode.id = id
+        opnode.codegen = function(params)
+            local N = params["N"]
+            return function(self)
+                local terra fn(a: typ[N], b: typ[N])
+                    var result: typ[N]
+                    for i = 0, N do
+                        result[i] = op(a[i], b[i])
+                    end
+                    return result
+                end
+                return `fn([self.args[1]:codegen()], [self.args[2]:codegen()])
+            end
         end
         table.insert(clauses, opnode)
     end
@@ -274,18 +334,45 @@ local function new_typechecker(env)
             end
 
             local result = {}
+            --print("***Looking for candidates ("..#candidates..") for "..name)
             for _, cand in ipairs(candidates) do
+                --print("Candidate")
+                --Util.table_print(cand)
+                --print("===")
                 if cand.nargs == #args then
-                    local fake_type = make_func(cand.valtype, args)
-                    fake_type.id = cand.id
-                    --print("***Calling match_type in findfunc***")
-                    local params = match_type(cand, fake_type)
-                    --print("***Result is nil: "..tostring(not params).."***")
-                    if params then
+                    local success = true
+
+                    -- 1. Pattern match the arguments to resolve any parameters
+                    -- 2. See if there are any parameters left over
+                    -- 3. Check that all types are equal or there is an error
+
+                    local params = {}
+                    for i, carg in ipairs(cand.argtypes) do
+                        local p = match_type(carg, args[i], params)
+                        if not p then
+                            --print("Failed match for "..carg:format().." and "..args[i]:format())
+                            success = false
+                            break
+                        end
+                        params = p
+                    end
+                    --for i, carg in ipairs(cand.argtypes) do
+                    --    local typ = reify_type(carg, params)
+                    --    if not match_type(typ, args[i]) then
+                    --        success = false
+                    --        break
+                    --    end
+                    --end
+
+                    --params = resolve_type_params(cand.valtype, params)
+
+                    if success then
                         if table_size(params) > 0 then
+                            local valtype = reify_type(cand.valtype, params)
+                            --print("Reified type = "..valtype:format())
                             cand = {
                                 id = cand.id,
-                                valtype = cand.valtype,
+                                valtype = valtype,
                                 codegen = cand.codegen(params)  -- Resolve parameters
                             }
                         end
@@ -294,6 +381,10 @@ local function new_typechecker(env)
                 end
             end
             if #result > 1 then
+                --for _, r in ipairs(result) do
+                --    Util.table_print(r)
+                --    print("---")
+                --end
                 Util.error(tostring(#result).." conflicting overloads for "..name)
             end
             return result[1]
@@ -509,19 +600,36 @@ function new(opts)
     end
 
     local arith_types = {"int", "float"}
+
+    local add_fn = macro(function(a, b) return `a + b end)
+    local adds = make_binop_impl("+", arith_types, nil, add_fn)
+    table_concat(adds, make_binop_vector_impl("+", arith_types, add_fn))
+
+    local sub_fn = macro(function(a, b) return `a - b end)
+    local subs = make_binop_impl("-", arith_types, nil, sub_fn)
+    table_concat(subs, make_binop_vector_impl("-", arith_types, sub_fn))
+
+    local mul_fn = macro(function(a, b) return `a * b end)
+    local muls = make_binop_impl("*", arith_types, nil, mul_fn)
+    table_concat(muls, make_binop_vector_impl("*", arith_types, mul_fn))
+
+    local div_fn = macro(function(a, b) return `a / b end)
+    local divs = make_binop_impl("/", arith_types, nil, div_fn)
+    table_concat(divs, make_binop_vector_impl("/", arith_types, div_fn))
+
     local builtin_env = {
-        ["neg"] = make_unaryop_impl("neg", arith_types, nil, function(a) return `-a end),
-        ["+"] = make_binop_impl("+", arith_types, nil, function(a, b) return `a + b end),
-        ["-"] = make_binop_impl("-", arith_types, nil, function(a, b) return `a - b end),
-        ["*"] = make_binop_impl("*", arith_types, nil, function(a, b) return `a * b end),
-        ["/"] = make_binop_impl("/", arith_types, nil, function(a, b) return `a / b end),
+        ["neg"] = make_unaryop_impl("neg", arith_types, nil, macro(function(a) return `-a end)),
+        ["+"] = adds,
+        ["-"] = subs,
+        ["*"] = muls,
+        ["/"] = divs,
         ["•"] = { doti, dotf },
-        ["=="] = make_binop_impl("==", arith_types, "bool", function(a, b) return `a == b end),
-        [">"] = make_binop_impl(">", arith_types, "bool", function(a, b) return `a > b end),
-        ["≥"] = make_binop_impl("≥", arith_types, "bool", function(a, b) return `a >= b end),
-        ["<"] = make_binop_impl("<", arith_types, "bool", function(a, b) return `a < b end),
-        ["≤"] = make_binop_impl("≤", arith_types, "bool", function(a, b) return `a <= b end),
-        ["≠"] = make_binop_impl("≠", arith_types, "bool", function(a, b) return `a ~= b end),
+        ["=="] = make_binop_impl("==", arith_types, "bool", macro(function(a, b) return `a == b end)),
+        [">"] = make_binop_impl(">", arith_types, "bool", macro(function(a, b) return `a > b end)),
+        ["≥"] = make_binop_impl("≥", arith_types, "bool", macro(function(a, b) return `a >= b end)),
+        ["<"] = make_binop_impl("<", arith_types, "bool", macro(function(a, b) return `a < b end)),
+        ["≤"] = make_binop_impl("≤", arith_types, "bool", macro(function(a, b) return `a <= b end)),
+        ["≠"] = make_binop_impl("≠", arith_types, "bool", macro(function(a, b) return `a ~= b end)),
     }
 
     local compiler = Compiler.new(opts)
