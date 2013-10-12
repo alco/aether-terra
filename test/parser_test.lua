@@ -234,3 +234,19 @@ assertError("Unexpected 'int'. Expected 'cparen'", stat, "def x 1")
 -- Vectors
 assertEq("(• 1 2)", expr("1 • 2"))
 assertEq("(• (vector (1 2 3)) (vector (4 5 6)))", expr("❮1 2 3❯ • ❮4 5 6❯"))
+
+-- For loop
+assertEq("(for (in i (funcall seq (10))) (block (= sum (+ sum i))))", stat([[
+    for i in seq(10) (
+        sum = sum + i
+    )
+]]))
+
+assertEqList({"(for (in i (funcall seq (10))) (block (= sum (+ sum i))))", "sum"},
+    all_stats([[
+        for i in seq(10) (
+            sum = sum + i
+        )
+        sum
+    ]]))
+

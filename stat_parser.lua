@@ -65,8 +65,10 @@ function new()
     make_node("string").snud = make_node("string").nud
 
     -- Comparisons
-    make_infix("and", 7)
     make_infix("or", 6)
+    make_infix("and", 7)
+
+    make_infix("in", 8)
 
     make_infix("==", 8)
     make_infix("≠",  8)
@@ -171,7 +173,7 @@ function new()
     make_node("❮").snud = make_node("❮").nud
 
     -- Funcalls
-    make_node("cparen", 1).led = function(self, left)
+    make_node("cparen", 100).led = function(self, left)
         local pnode = {
             id = "funcall",
             name = left,
@@ -249,6 +251,19 @@ function new()
         return pnode
     end
     make_node("if").snud = make_node("if").nud
+
+    -- For loop
+    make_node("for").snud = function(self)
+        local pnode = {
+            id = "for",
+            head = parser:expression(),
+            body = parser:statement(nil, true),
+            format = function(self)
+                return Util.strformat("(for {1} {2})", self.head:format(), self.body:format())
+            end
+        }
+        return pnode
+    end
 
     -- Function literal
     function parse_shortfuct_function(pnode)

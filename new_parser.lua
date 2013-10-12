@@ -146,7 +146,7 @@ function new()
         return left
     end
 
-    function parser.statement(self, rbp)
+    function parser.statement(self, rbp, dont_skip_eol)
         rbp = rbp or 0
 
         -- May be an empty statement, so we don't pull
@@ -161,23 +161,26 @@ function new()
         end
 
         self:pullNode()
-        --print("Calling nud on")
-        --table_print(node)
+        --G.print("Calling nud on "..node.id)
         --print("---")
         local left = node:snud()
         while self:peekNode() and rbp < self:peekNode().lbp do
             --print("beginloop")
             node = self:pullNode()
-            --print("Calling led on")
-            --table_print(t)
+            --G.print("Calling led on "..node.id)
             --print("---")
             left = node:sled(left)
             --print("endloop")
         end
 
-        local terminator = self:skip_eol()
-        if terminator == ";" then
-            left.isstatement = true
+        if not dont_skip_eol then
+            --G.print("Calling skip eol")
+            local terminator = self:skip_eol()
+            if terminator == ";" then
+                left.isstatement = true
+            end
+        else
+            --G.print("__Skipping Calling skip eol")
         end
 
         return left
@@ -294,6 +297,7 @@ function new()
     end
 
     function parser.skip_eol(self)
+        --G.print(G.debug.traceback())
         local tok = self.tokenizer.peekToken()
         if not tok then
             return
