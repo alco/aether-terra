@@ -71,6 +71,17 @@ a = if x == 1 (
     6
 )
 
+fn(bytes) (
+    var MODULO = 65521
+    var a = 1, b = 0
+    for var byte in bytes (
+        a = (a + byte) mod MODULO
+        b = (b + a) mod MODULO
+    )
+    (b << 16) bor a
+)
+
+
 //if a ≤ b (4 * 5) else -4
 //
 //if a ≤ b (4 * 5) else (-4)

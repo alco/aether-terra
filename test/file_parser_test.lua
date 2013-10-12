@@ -33,6 +33,9 @@ assertEqList({
     "(+ (fn (sym#12 sym#13) (+ sym#12 (* sym#13 sym#13))) 3)",
     "(= f (+ (fn (sym#14 sym#15) (+ sym#14 (* sym#15 sym#15))) 3))",
     "(= a (if (== x 1) (block 1 2) (if (== x 2) (block 3 4) (if (≥ c 4) (block 5 6)))))",
+    "(fn (bytes) (block (var (MODULO 65521)) (var (a 1) (b 0))"..
+        " (for (in (var (byte)) bytes) (block (= a (mod (+ a byte) MODULO)) (= b (mod (+ b a) MODULO))))"..
+        " (bor (<< b 16) a)))"
 }, all_stats("fixtures/blocks.ae"))
 
 assertEqList({
