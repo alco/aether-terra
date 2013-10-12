@@ -65,7 +65,7 @@ function parseNumber(str, pos)
     --print("Current pos = "..pos)
     --print("Leftover string = "..str:sub(pos))
 
-    if str:sub(pos, pos) == "." then
+    if str:sub(pos, pos) == "." and str:sub(pos+1, pos+1) ~= "." then  -- FIMXE: check out of bounds
         typ = "float"
         result = result .. "."
 
@@ -209,7 +209,7 @@ end
 function tokenize(str)
     local tokens = {}
     local pos = 1
-    local ops = {"::", "²", "³", "--", "++", "<<", ">>", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
+    local ops = {"..", "::", "²", "³", "--", "++", "<<", ">>", "->", "==", "≠", "≤", "≥", "↑", "∞", "**", "•", "+", "-", "*", "/", "^", "<", ">", "=", "!", ":"}
     local symbols = {"➀", "➁", "➂"}
     local terminals = {"❮", "❯", "〖", "〗", "'", "`", "(", ")", "[", "]", "{", "}", ".", ";", ","}
     local whitespace = {" ", "\t", "\n"}

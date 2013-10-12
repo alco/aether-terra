@@ -69,6 +69,31 @@ function new()
     make_infix("and", 7)
 
     make_infix("in", 8)
+    make_node("..", 8).led = function(self, other)
+        local pnode = {
+            id = self.id,
+            first = other,
+            format = function(self)
+                local second = self.second and self.second:format() or "_"
+                return Util.strformat("({1} {2} {3})", self.id, self.first:format(), second)
+            end,
+            visit = function(self, visitor)
+                visitor(self)
+                self.first:visit(visitor)
+                self.second:visit(visitor)
+            end,
+        }
+        local tok = parser.tokenizer.peekToken()
+        if not tok then
+            Util.error("Suffix .. cannot be used outside of function call")
+        end
+        if tok.value ~= ")" then
+            pnode.second = parser:expression(8)
+        end
+        return pnode
+    end
+    make_node("..").sled = make_node("..").led
+
 
     make_infix("==", 8)
     make_infix("≠",  8)

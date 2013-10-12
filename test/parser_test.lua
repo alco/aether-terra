@@ -250,3 +250,32 @@ assertEqList({"(for (in i (funcall seq (10))) (block (= sum (+ sum i))))", "sum"
         sum
     ]]))
 
+assertEq("(.. 1 2)", expr("1..2"))
+assertEq("(funcall seq ((.. 1 _)))", expr("seq(1..)"))
+
+assertEqList({"(var (sum 0))", "(for (in i (funcall seqn ((.. 1 10)))) (block (= sum (+ sum i))))", "sum"},
+    all_stats([[
+        var sum = 0
+        for i in seqn(1..10) (
+            sum = sum + i
+        )
+        sum
+    ]]))
+
+assertEqList({"(var (sum 0))", "(for (in i (funcall seqn (1 (.. 2 10)))) (block (= sum (+ sum i))))", "sum"},
+    all_stats([[
+        var sum = 0
+        for i in seqn(1,2..10) (
+            sum = sum + i
+        )
+        sum
+    ]]))
+
+assertEqList({"(var (sum 0))", "(for (in i (funcall seqn (1 (.. 2 _)))) (block (= sum (+ sum i))))", "sum"},
+    all_stats([[
+        var sum = 0
+        for i in seqn(1,2..) (
+            sum = sum + i
+        )
+        sum
+    ]]))
