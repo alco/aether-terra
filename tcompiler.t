@@ -241,10 +241,11 @@ local function make_unaryop_impl(id, types, retype, op)
         local opnode = parse_func(sig)
         opnode.id = id
         opnode.codegen = function(self)
-            local terra fn(a: typ)
-                return op(a)
+            return quote
+                var a: typ = [self.args[1]:codegen()]
+            in
+                op(a)
             end
-            return `fn([self.args[1]:codegen()])
         end
         table.insert(clauses, opnode)
     end
@@ -283,12 +284,12 @@ local function make_binop_impl(id, types, retype, op)
         local opnode = parse_func(sig)
         opnode.id = id
         opnode.codegen = function(self)
-            local terra fn(a: typ, b: typ)
-                return op(a, b)
+            return quote
+                var a: typ = [self.args[1]:codegen()]
+                var b: typ = [self.args[2]:codegen()]
+            in
+                op(a, b)
             end
-            --print("Impl for "..id)
-            --fn:printpretty()
-            return `fn([self.args[1]:codegen()], [self.args[2]:codegen()])
         end
         table.insert(clauses, opnode)
     end
@@ -305,14 +306,16 @@ function make_binop_vector_impl(id, types, op)
         opnode.codegen = function(params)
             local N = params["N"]
             return function(self)
-                local terra fn(a: typ[N], b: typ[N])
+                return quote
+                    var a: typ[N] = [self.args[1]:codegen()]
+                    var b: typ[N] = [self.args[2]:codegen()]
                     var result: typ[N]
                     for i = 0, N do
                         result[i] = op(a[i], b[i])
                     end
-                    return result
+                in
+                    result
                 end
-                return `fn([self.args[1]:codegen()], [self.args[2]:codegen()])
             end
         end
         table.insert(clauses, opnode)
@@ -631,14 +634,16 @@ function new(opts)
     doti.codegen = function(params)
         local N = params["N"]
         return function(self)
-            local terra dotN(a: int[N], b: int[N])
+            return quote
                 var result: int = 0
+                var a: int[N] = [self.args[1]:codegen()]
+                var b: int[N] = [self.args[2]:codegen()]
                 for i = 0, N do
                     result = result + a[i] * b[i]
                 end
-                return result
+            in
+                result
             end
-            return `dotN([self.args[1]:codegen()], [self.args[2]:codegen()])
         end
     end
 
@@ -647,14 +652,16 @@ function new(opts)
     dotf.codegen = function(params)
         local N = params["N"]
         return function(self)
-            local terra dotN(a: float[N], b: float[N])
+            return quote
                 var result: float = 0
+                var a: float[N] = [self.args[1]:codegen()]
+                var b: float[N] = [self.args[2]:codegen()]
                 for i = 0, N do
                     result = result + a[i] * b[i]
                 end
-                return result
+            in
+                result
             end
-            return `dotN([self.args[1]:codegen()], [self.args[2]:codegen()])
         end
     end
 
