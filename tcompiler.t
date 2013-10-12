@@ -571,8 +571,15 @@ local function new_typechecker(env)
             return {
                 codegen = function(self)
                     local variable = env["bytes"]
-                    local terra fn([variable.sym]: &int): int
-                        return [ tbody:codegen() ]
+                    local fn
+                    if tbody.valtype == "void" then
+                        fn = terra([variable.sym]: &int)
+                            [ tbody:codegen() ]
+                        end
+                    else
+                        fn = terra([variable.sym]: &int): int
+                            return [ tbody:codegen() ]
+                        end
                     end
                     return fn
                 end
