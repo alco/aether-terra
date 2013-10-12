@@ -160,6 +160,8 @@ assertEq("(var (a 1) (b 2))", stat("var a = 1, b = 2"))
 assertEq("(var (a:int))", stat("var a int"))
 assertEq("(var (a:int) (b:int) (c:int))", stat("var a, b, c int"))
 
+assertEq("(in (var (a)) x)", stat("var a in x"))
+
 assertEq("(var (a:int))", stat("var a: int"))
 assertEq("(var (a:uint (+ 1 2)))", stat("var a: uint = 1 + 2"))
 assertEq("(var (a:int) (b:uint 5) (c:string))", stat("var a: int, b: uint = 5, c: string"))
@@ -238,6 +240,12 @@ assertEq("(• (vector (1 2 3)) (vector (4 5 6)))", expr("❮1 2 3❯ • ❮4 5
 -- For loop
 assertEq("(for (in i (funcall seq (10))) (block (= sum (+ sum i))))", stat([[
     for i in seq(10) (
+        sum = sum + i
+    )
+]]))
+
+assertEq("(for (in (var (i)) (funcall seq (10))) (block (= sum (+ sum i))))", stat([[
+    for var i in seq(10) (
         sum = sum + i
     )
 ]]))

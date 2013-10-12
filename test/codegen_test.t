@@ -8,9 +8,11 @@ function evalexpr(line, printcode)
     local typed_expr = compiler.typecheck_single_expression(expr)
     local terra_fn = compiler.codegen_single_expression(typed_expr)
     if printcode then
+        print("*** Terra code:")
         terra_fn:printpretty()
+        print()
+        print("*** LLVM IR:")
         terra_fn:disas()
-        print("***********")
     end
     return terra_fn()
 end
@@ -119,13 +121,34 @@ assertEq(false, evalexpr("0.0/0.0 ≤ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
 
 -- More complex blocks
-assertEq(9044106, evalexpr([[
-(
+assertEq(11403310, evalexpr([[(
     var MODULO = 65521
     var a = 1, b = 0
-    //for byte in bytes {
-        a = (a + 137) mod MODULO
+    var bytes = ❮1 2 3 4 5 6 7 8 9❯
+    for var byte in bytes (
+        a = (a + byte) mod MODULO
         b = (b + a) mod MODULO
-    //}
+    )
     (b << 16) bor a
 )]], true))
+
+--assertEq(45, evalexpr([[(
+--    var sum = 0
+--    for i in seq(10) (
+--        sum = sum + i
+--    )
+--    sum
+--)]]))
+
+--assertEq(55, evalexpr([[
+--(
+--    var sum = 0
+--    for i in seqn(1.. 10) (
+--        sum += i
+--    )
+--    sum
+--)]]))
+
+--assertEq(100, evalexpr("fold('+, seqn(1,3.. 10))"))
+--assertEq(45, evalexpr("seqn(10) => `+"))
+--assertEq(55, evalexpr("seqn(1.. 10) => `+"))

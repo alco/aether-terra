@@ -114,6 +114,8 @@ local function parse_terratype(typ)
         return bool
     elseif typ == "(3)int" then -- FIXME
         return int[3]
+    elseif typ == "(9)int" then -- FIXME
+        return int[9]
     end
     Util.error("Unhandled type "..typ)
 end
@@ -156,6 +158,10 @@ local function make_vector(len, elemtype)
             return Util.strformat("({1}){2}", len, self.elemtype:format())
         end
     }
+end
+
+local function is_subscriptable(node)
+    return node.valtype.structure == "vector"
 end
 
 --
@@ -488,11 +494,49 @@ local function new_typechecker(env)
                 end
             }
         end,
+        ["for"] = function(checker, env, node)
+            if node.head.id ~= "in" then
+                Util.error("Expected 'for in'")
+            end
+
+            local coll = checker:typecheck(node.head.second, env)
+            if not is_subscriptable(coll) then
+                Util.error("Expected a subscriptable collection after 'in'")
+            end
+
+            if node.body.id ~= "block" then
+                Util.error("Expected a block as the loop body")
+            end
+            local variable = node.head.first
+            if variable.id ~= "var" then
+                Util.error("Expected a var statement before 'in'")
+            end
+            local tvar = checker:typecheck(variable, env) -- FIXME: don't polute current env
+            if not tvar.vars[1].valtype then
+                tvar.vars[1].valtype = coll.valtype.elemtype
+            end
+
+            local tblock = checker:typecheck(node.body, env)
+            return {
+                id = node.id,
+                valtype = "void",
+                codegen = function(self)
+                    local typ = parse_terratype(tvar.vars[1].valtype:format())
+                    return quote
+                        for i = 0, [coll.valtype.len], 1 do
+                            var [tvar.vars[1].sym]: typ = [coll:codegen()][i]
+                            [ tblock:codegen() ]
+                        end
+                    end
+                end
+            }
+        end,
         ["var"] = function(checker, env, node)
             -- FIXME check that env does not already contain declared vars
             local varnode = {
                 id = node.id,
                 valtype = "void",
+                vars = {}
             }
             for _, v in ipairs(node.varlist.vars) do
                 local variable = {
@@ -520,6 +564,7 @@ local function new_typechecker(env)
                     end
                 end
                 env[v.name.value] = variable
+                table.insert(varnode.vars, variable)
             end
             varnode.codegen = function(self)
                 local vars = terralib.newlist()
@@ -545,7 +590,7 @@ local function new_typechecker(env)
         ["="] = function(checker, env, node)
             local variable = env[node.name.value]
             if not variable then
-                Util.error("Undefined variable "..node.name.value)
+                Util.error("Undefined variable in assignment: "..node.name.value)
             end
 
             local val = checker:typecheck(node.value, env)
