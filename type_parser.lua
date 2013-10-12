@@ -33,7 +33,7 @@ function new(parent_parser)
         return pnode
     end
 
-    make_prefix("[").nud = function(self)
+    make_prefix("[", 20).nud = function(self)
         -- []int     // dynamic array of ints / slice
         -- [5]int    // static array of ints / vector
         -- [4,5]int  // two-dimensional array of ints
@@ -55,11 +55,11 @@ function new(parent_parser)
         parser.tokenizer.pushToken()
         if node.id ~= "]" then
             -- parse number
-            pnode.size = parser:expression()
+            pnode.size = parser:expression(20)
         end
         parser:skip("]")
 
-        pnode.elemtype = parser:expression()
+        pnode.elemtype = parser:expression(20)
         return pnode
     end
 
