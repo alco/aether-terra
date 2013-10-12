@@ -330,6 +330,8 @@ function new()
     end
     make_node("〖").snud = make_node("〖").nud
 
+    make_node("::")
+
     make_node("fn").nud = function(self)
         local pnode = make_function_literal_stub()
 
@@ -337,6 +339,9 @@ function new()
         if node.id == "cparen" then
             -- function literal
             pnode.args = parser:expr_list_until(")")
+            if parser:peekAndSkip("::") then
+                pnode.typ = type_parser:expression()
+            end
             pnode.body = parser:expression()
         else
             -- short function literal

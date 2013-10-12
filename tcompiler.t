@@ -122,6 +122,18 @@ end
 
 --
 
+local function make_variable(name, env)
+    local variable = {
+        name = name,
+        sym = symbol(),
+        codegen = function(self)
+            return self.sym
+        end
+    }
+    env[name] = variable
+    return variable
+end
+
 local function make_conversion(val, typ)
     return {
         id = "as",
@@ -534,6 +546,38 @@ local function new_typechecker(env)
                 end
             }
         end,
+        ["fn"] = function(checker, env, node)
+            --print(node.typ:format())
+            --Util.table_print(node)
+            --Util.error("NOT IMPLEMENTED")
+
+            -- FIXME: fix hard-coded types
+
+            -- Set up the arguments as local variables
+            local arguments = terralib.newlist()
+            for _, ident in ipairs(node.args.exprs) do
+                local variable = make_variable(ident.value, env)
+                variable.valtype = make_vector(9, parse_type("int"))
+                --local typ = parse_terratype(variable.valtype)
+                --local q = quote [variable.sym]: typ end
+                --arguments:insert()
+            end
+
+            local tbody = checker:typecheck(node.body, env)
+            if not match_type(tbody.valtype, parse_type("int")) then
+                Util.error("Mismatching types in function sig and last expr")
+            end
+
+            return {
+                codegen = function(self)
+                    local variable = env["bytes"]
+                    local terra fn([variable.sym]: &int): int
+                        return [ tbody:codegen() ]
+                    end
+                    return fn
+                end
+            }
+        end,
         ["var"] = function(checker, env, node)
             -- FIXME check that env does not already contain declared vars
             local varnode = {
@@ -542,17 +586,9 @@ local function new_typechecker(env)
                 vars = {}
             }
             for _, v in ipairs(node.varlist.vars) do
-                local variable = {
-                    name = v.name.value,
-                    codegen = function(self)
-                        return self.sym
-                    end
-                }
+                local variable = make_variable(v.name.value, env)
                 if v.typ then
                     variable.valtype = parse_type(v.typ)
-                    variable.sym = symbol(parse_terratype(v.typ), v.name.value)
-                else
-                    variable.sym = symbol(v.name.value)
                 end
                 if v.value then
                     local val = checker:typecheck(v.value, env)
@@ -566,7 +602,6 @@ local function new_typechecker(env)
                         variable.value = val
                     end
                 end
-                env[v.name.value] = variable
                 table.insert(varnode.vars, variable)
             end
             varnode.codegen = function(self)
@@ -723,6 +758,9 @@ function new(opts)
             code
         end
         return fn
+    end
+    compiler.codegen_single_function = function(expr)
+        return expr:codegen()
     end
     return compiler
 end

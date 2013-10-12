@@ -17,6 +17,14 @@ function evalexpr(line, printcode)
     return terra_fn()
 end
 
+function evalfunc(line)
+    local compiler = Compiler.new { line = line }
+    local expr = compiler.parse_single_expression()
+    local typed_expr = compiler.typecheck_single_expression(expr)
+    local terra_fn = compiler.codegen_single_function(typed_expr)
+    return terra_fn
+end
+
 ---
 
 assertEq(1, evalexpr("1"))
@@ -130,7 +138,26 @@ assertEq(11403310, evalexpr([[(
         b = (b + a) mod MODULO
     )
     (b << 16) bor a
-)]], true))
+)]], false))
+
+local adler32 = evalfunc([[
+fn(bytes) :: []int -> int (
+    var MODULO = 65521
+    var a = 1, b = 0
+    for var byte in bytes (
+        a = (a + byte) mod MODULO
+        b = (b + a) mod MODULO
+    )
+    (b << 16) bor a
+)
+]])
+--adler32:printpretty()
+--adler32:disas()
+local terra test_adler32()
+    var a = arrayof(int, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    return adler32([&int](a))
+end
+assertEq(11403310, test_adler32())
 
 --assertEq(45, evalexpr([[(
 --    var sum = 0
