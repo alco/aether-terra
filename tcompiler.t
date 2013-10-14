@@ -122,14 +122,18 @@ end
 
 --
 
-local function make_variable(name, env)
+local function make_variable(name, env, typ)
     local variable = {
         name = name,
-        sym = symbol(),
         codegen = function(self)
             return self.sym
         end
     }
+    if typ then
+        variable.sym = symbol(typ, name)
+    else
+        variable.sym = symbol(name)
+    end
     env[name] = variable
     return variable
 end
@@ -556,28 +560,31 @@ local function new_typechecker(env)
             -- Set up the arguments as local variables
             local arguments = terralib.newlist()
             for _, ident in ipairs(node.args.exprs) do
-                local variable = make_variable(ident.value, env)
-                variable.valtype = make_vector(9, parse_type("int"))
-                --local typ = parse_terratype(variable.valtype)
-                --local q = quote [variable.sym]: typ end
-                --arguments:insert()
+                local typ = make_vector(9, parse_type("int"))
+                local terratyp = parse_terratype(typ)
+                local variable = make_variable(ident.value, env, terratyp)
+                variable.valtype = typ
+                arguments:insert(variable.sym)
             end
 
+            local fn_type = parse_type("int")
+            local fn_terratype = parse_terratype(fn_type)
+
             local tbody = checker:typecheck(node.body, env)
-            if not match_type(tbody.valtype, parse_type("int")) then
+            if not match_type(tbody.valtype, fn_type) then
                 Util.error("Mismatching types in function sig and last expr")
             end
 
             return {
+                id = node.id,
                 codegen = function(self)
-                    local variable = env["bytes"]
                     local fn
                     if tbody.valtype == "void" then
-                        fn = terra([variable.sym]: &int)
+                        fn = terra([arguments])
                             [ tbody:codegen() ]
                         end
                     else
-                        fn = terra([variable.sym]: &int): int
+                        fn = terra([arguments]): fn_terratype
                             return [ tbody:codegen() ]
                         end
                     end

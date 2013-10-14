@@ -155,7 +155,7 @@ fn(bytes) :: []int -> int (
 --adler32:disas()
 local terra test_adler32()
     var a = arrayof(int, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-    return adler32([&int](a))
+    return adler32(a)
 end
 assertEq(11403310, test_adler32())
 
