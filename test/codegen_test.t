@@ -140,8 +140,24 @@ assertEq(11403310, evalexpr([[(
     (b << 16) bor a
 )]], false))
 
+local somefn = evalfunc([[
+fn(a b c) :: (int int int) -> int (
+    a
+)
+]])
+assertEq(1, somefn(1,3,3))
+assertEq(2, somefn(2,1,1))
+assertEq(3, somefn(3,2,2))
+
+local sum3 = evalfunc([[
+fn(a b c) :: (int int int) -> int (
+    a + b + c
+)
+]])
+assertEq(6, sum3(1,2,3))
+
 local adler32 = evalfunc([[
-fn(bytes) :: []int -> int (
+fn(bytes) :: [9]int -> int (
     var MODULO = 65521
     var a = 1, b = 0
     for var byte in bytes (

@@ -104,19 +104,76 @@ end
 
 --
 
-local function parse_terratype(typ)
+local function make_prim(name)
+    return {
+        structure = "primitive",
+        name = name,
+        format = function(self)
+            return self.name
+        end
+    }
+end
+
+local function make_vector(len, elemtype)
+    return {
+        structure = "vector",
+        len = len,
+        elemtype = elemtype,
+        format = function(self)
+            local len = self.len
+            if type(len) == "table" then
+                len = len.param
+            end
+            return Util.strformat("({1}){2}", len, self.elemtype:format())
+        end
+    }
+end
+
+local function parse_type(typ)
     typ = typ:format()
-    if typ == "int" then
-        return int
-    elseif typ == "float" then
-        return float
-    elseif typ == "bool" then
-        return bool
-    elseif typ == "(3)int" then -- FIXME
-        return int[3]
-    elseif typ == "(9)int" then -- FIXME
-        return int[9]
+    if typ == "int" or typ == "float" or typ == "bool" then
+        return make_prim(typ)
+    elseif string.match(typ, "%((%w)%)(%w+)") then
+        local len, elemtype = string.match(typ, "%((%w)%)(%w+)")
+        if tonumber(len) then
+            return make_vector(tonumber(len), parse_type(elemtype))
+        else
+            return make_vector({ param = len }, parse_type(elemtype))
+        end
     end
+    Util.error("Cannot parse type "..typ)
+end
+
+local function parse_astype(typ)
+    --print("Parsing astype")
+    --print(typ:format())
+    --Util.table_print(typ)
+    if typ.id == "array" then
+        return parse_type(Util.strformat("({1}){2}", typ.size.value, parse_astype(typ.elemtype):format()))
+    else
+        return parse_type(typ:format())
+    end
+end
+
+local function parse_terratype(typ)
+    if type(typ) == "string" then
+        typ = parse_type(typ)
+    end
+
+    if typ.structure == "primitive" then
+        if typ.name == "int" then
+            return int
+        elseif typ.name == "float" then
+            return float
+        elseif typ.name == "bool" then
+            return bool
+        else
+            Util.error("Unhandled primitive type "..typ:format())
+        end
+    elseif typ.structure == "vector" then
+        return parse_terratype(typ.elemtype)[typ.len]
+    end
+    print(debug.traceback())
     Util.error("Unhandled type "..typ)
 end
 
@@ -150,52 +207,11 @@ local function make_conversion(val, typ)
     }
 end
 
-
-local function make_prim(name)
-    return {
-        structure = "primitive",
-        name = name,
-        format = function(self)
-            return self.name
-        end
-    }
-end
-
-local function make_vector(len, elemtype)
-    return {
-        structure = "vector",
-        len = len,
-        elemtype = elemtype,
-        format = function(self)
-            local len = self.len
-            if type(len) == "table" then
-                len = len.param
-            end
-            return Util.strformat("({1}){2}", len, self.elemtype:format())
-        end
-    }
-end
-
 local function is_subscriptable(node)
     return node.valtype.structure == "vector"
 end
 
 --
-
-local function parse_type(typ)
-    typ = typ:format()
-    if typ == "int" or typ == "float" or typ == "bool" then
-        return make_prim(typ)
-    elseif string.match(typ, "%((%w)%)(%w+)") then
-        local len, elemtype = string.match(typ, "%((%w)%)(%w+)")
-        if tonumber(len) then
-            return make_vector(tonumber(len), parse_type(elemtype))
-        else
-            return make_vector({ param = len }, parse_type(elemtype))
-        end
-    end
-    Util.error("Cannot parse type "..typ)
-end
 
 local function make_func(ret, args)
     return {
@@ -552,22 +568,37 @@ local function new_typechecker(env)
         end,
         ["fn"] = function(checker, env, node)
             --print(node.typ:format())
-            --Util.table_print(node)
+            --Util.table_print(node.typ)
             --Util.error("NOT IMPLEMENTED")
 
-            -- FIXME: fix hard-coded types
+            if node.typ.id ~= "funcall" then
+                Util.error("Wrong type for a function. Expected '... -> ...'")
+            end
+
+            local argtype = node.typ.first
+            local rettype = node.typ.second
+
+            if #node.args.exprs > 1 and argtype.id ~= "tuple" then
+                Util.error("Mismatching type signature to the actual argument count")
+            end
 
             -- Set up the arguments as local variables
             local arguments = terralib.newlist()
-            for _, ident in ipairs(node.args.exprs) do
-                local typ = make_vector(9, parse_type("int"))
-                local terratyp = parse_terratype(typ)
+            for i, ident in ipairs(node.args.exprs) do
+                local typ
+                if argtype.id == "tuple" then
+                    typ = argtype.args.exprs[i]
+                else
+                    typ = argtype
+                end
+                local valtype = parse_astype(typ)
+                local terratyp = parse_terratype(valtype)
                 local variable = make_variable(ident.value, env, terratyp)
-                variable.valtype = typ
+                variable.valtype = valtype
                 arguments:insert(variable.sym)
             end
 
-            local fn_type = parse_type("int")
+            local fn_type = parse_astype(rettype)
             local fn_terratype = parse_terratype(fn_type)
 
             local tbody = checker:typecheck(node.body, env)
