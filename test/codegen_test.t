@@ -130,13 +130,15 @@ assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
 
 local sum = evalfunc([[
 fn(bytes) :: [9]int -> int (
-    var sum int
+    var sum = 0       // FIXME: add default initialization
     for var byte in bytes (
         sum = sum + byte
     )
     sum
 )
 ]])
+--sum:printpretty()
+--sum:disas()
 local terra test_sum()
     var a = arrayof(int, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     return sum(a)
