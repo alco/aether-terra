@@ -234,6 +234,17 @@ assertError("Unexpected end of input", stat, "def x")
 assertError("Unexpected 'int'. Expected 'cparen'", stat, "def x 1")
 
 assertEq("(fn (base exp) (block))", stat("fn(base exp) :: (flt flt) -> flt ()"))
+assertEq("(fn (bytes) (block (var (sum:int)) (for (in (var (byte)) bytes) (block (= sum (+ sum byte)))) sum))",
+    expr([[
+        fn(bytes) :: [9]int -> int (
+            var sum int
+            for var byte in bytes (
+                sum = sum + byte
+            )
+            sum
+        )
+    ]]))
+
 
 -- Vectors
 assertEq("(• 1 2)", expr("1 • 2"))

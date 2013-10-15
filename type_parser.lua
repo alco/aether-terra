@@ -81,6 +81,7 @@ function new(parent_parser)
     make_node(",")
     make_node("=")
     make_node("]")
+    make_node("nl")
 
     --function table.make_typevar(value)
         --local typevar = make_node("ident")
