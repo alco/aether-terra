@@ -128,6 +128,22 @@ assertEq(false, evalexpr("0.0/0.0 < 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≤ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
 
+local sum = evalfunc([[
+fn(bytes) :: [9]int -> int (
+    var sum int
+    for var byte in bytes (
+        sum = sum + byte
+    )
+    sum
+)
+]])
+local terra test_sum()
+    var a = arrayof(int, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    return sum(a)
+end
+assertEq(45, test_sum())
+
+
 -- More complex blocks
 assertEq(11403310, evalexpr([[(
     var MODULO = 65521
