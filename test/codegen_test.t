@@ -232,6 +232,24 @@ for i = 1, 100 do
     sum_acc = sum_acc + i
     assertEq(sum_acc, num_sum2(i))
 end
+
+local nth_fib = evalfunc([[
+fn(N) :: int -> int (
+    var a = 0, b = 1
+    for var i in seq(N) (
+        // FIXME: ugly code
+        var t = b
+        b = a + b
+        a = t
+    )
+    a
+)
+]])
+assertEq(0, nth_fib(0))
+assertEq(1, nth_fib(1))
+assertEq(1, nth_fib(2))
+assertEq(21, nth_fib(8))
+assertEq(144, nth_fib(12))
 --    )
 --    sum
 --)]]))
