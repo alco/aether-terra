@@ -193,10 +193,28 @@ local terra test_adler32()
 end
 assertEq(11403310, test_adler32())
 
---assertEq(45, evalexpr([[(
---    var sum = 0
---    for i in seq(10) (
---        sum = sum + i
+assertEq(45, evalexpr([[(
+    var sum = 0
+    for var i in seq(10) (
+        sum = sum + i
+    )
+    sum
+)]]))
+
+local num_sum = evalfunc([[
+fn(N) :: int -> int (
+    var sum = 0   // FIXME: add default initialization
+    for var i in seq(N) (
+        sum = sum + i
+    )
+    sum
+)]])
+--num_sum:printpretty()
+local sum_acc = 0
+for i = 0, 100 do
+    assertEq(sum_acc, num_sum(i))
+    sum_acc = sum_acc + i
+end
 --    )
 --    sum
 --)]]))

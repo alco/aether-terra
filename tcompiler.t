@@ -207,8 +207,27 @@ local function make_conversion(val, typ)
     }
 end
 
+--
+
+local function resolve_fn(name, args, env)
+    -- FIXME: check in env first
+    if name == "seq" then
+        return {
+            id = "stream",
+            streamtype = "compile-time-sequence",
+            seqstart = 0,
+            seqstep = 1,
+            seqend = args[1],
+            valtype = {
+                elemtype = make_prim("int")
+            }
+        }
+    end
+    Util.error("Unhandled function in resolve:"..name)
+end
+
 local function is_subscriptable(node)
-    return node.valtype.structure == "vector"
+    return node.valtype and node.valtype.structure == "vector"
 end
 
 --
@@ -356,6 +375,15 @@ function make_binop_vector_impl(id, types, op)
 end
 
 --
+
+local function get_or_codegen(val)
+    if type(val) == "table" then
+        return val:codegen()
+    elseif type(val) == "number" then
+        return val
+    end
+    Util.error("Don't know how to handle the value: "..tostring(val))
+end
 
 local function new_typechecker(env)
     local checker = {
@@ -529,15 +557,22 @@ local function new_typechecker(env)
                 end
             }
         end,
+        ["funcall"] = function(checker, env, node)
+            --Util.table_print(node)
+            local targs = Util.map(node.args.exprs, function(expr)
+                return checker:typecheck(expr, env)
+            end)
+            if node.name.id == "ident" then
+                return resolve_fn(node.name.value, targs, env)
+            end
+            Util.error("Incomplete implementation of 'funcall' typechecking")
+        end,
         ["for"] = function(checker, env, node)
             if node.head.id ~= "in" then
                 Util.error("Expected 'for in'")
             end
 
             local coll = checker:typecheck(node.head.second, env)
-            if not is_subscriptable(coll) then
-                Util.error("Expected a subscriptable collection after 'in'")
-            end
 
             if node.body.id ~= "block" then
                 Util.error("Expected a block as the loop body")
@@ -546,25 +581,48 @@ local function new_typechecker(env)
             if variable.id ~= "var" then
                 Util.error("Expected a var statement before 'in'")
             end
-            local tvar = checker:typecheck(variable, env) -- FIXME: don't polute current env
+            local tvar = checker:typecheck(variable, env) -- FIXME: do not polute current env
             if not tvar.vars[1].valtype then
                 tvar.vars[1].valtype = coll.valtype.elemtype
             end
 
             local tblock = checker:typecheck(node.body, env)
-            return {
+
+            local retnode = {
                 id = node.id,
                 valtype = "void",
-                codegen = function(self)
-                    local typ = parse_terratype(tvar.vars[1].valtype:format())
+            }
+            local loopvartype = parse_terratype(tvar.vars[1].valtype)
+            if is_subscriptable(coll) then
+                retnode.codegen = function(self)
                     return quote
                         for i = 0, [coll.valtype.len], 1 do
-                            var [tvar.vars[1].sym]: typ = [coll:codegen()][i]
+                            var [tvar.vars[1].sym]: loopvartype = [coll:codegen()][i]
                             [ tblock:codegen() ]
                         end
                     end
                 end
-            }
+            elseif coll.id == "stream" then
+                if coll.streamtype == "compile-time-sequence" then
+                    retnode.codegen = function(self)
+                        local seqstart = get_or_codegen(coll.seqstart)
+                        local seqstep = get_or_codegen(coll.seqstep)
+                        local seqend = get_or_codegen(coll.seqend)
+                        local s = tvar.vars[1].sym
+                        return quote
+                            var [s]: loopvartype
+                            for [s] = [seqstart], [seqend], [seqstep] do
+                                [ tblock:codegen() ]
+                            end
+                        end
+                    end
+                else
+                    Util.error("Unhandled stream type: "..coll.streamtype)
+                end
+            else
+                Util.error("Expected a subscriptable collection or a stream after 'in'")
+            end
+            return retnode
         end,
         ["fn"] = function(checker, env, node)
             --print(node.typ:format())
