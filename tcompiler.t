@@ -222,6 +222,18 @@ local function resolve_fn(name, args, env)
                 elemtype = make_prim("int")
             }
         }
+    elseif name == "seqi" then
+        return {
+            id = "stream",
+            streamtype = "compile-time-sequence",
+            inclusive = true,
+            seqstart = 0,
+            seqstep = 1,
+            seqend = args[1],
+            valtype = {
+                elemtype = make_prim("int")
+            }
+        }
     end
     Util.error("Unhandled function in resolve:"..name)
 end
@@ -605,14 +617,26 @@ local function new_typechecker(env)
             elseif coll.id == "stream" then
                 if coll.streamtype == "compile-time-sequence" then
                     retnode.codegen = function(self)
+                        -- FIXME: deal with types of literal constants in terra code
                         local seqstart = get_or_codegen(coll.seqstart)
                         local seqstep = get_or_codegen(coll.seqstep)
                         local seqend = get_or_codegen(coll.seqend)
                         local s = tvar.vars[1].sym
+                        local cmp_op
+                        if coll.inclusive then
+                            cmp_op = macro(function(a, b)
+                                return `a <= b
+                            end)
+                        else
+                            cmp_op = macro(function(a, b)
+                                return `a < b
+                            end)
+                        end
                         return quote
-                            var [s]: loopvartype
-                            for [s] = [seqstart], [seqend], [seqstep] do
+                            var [s]: loopvartype = [seqstart]
+                            while cmp_op([s], [seqend]) do
                                 [ tblock:codegen() ]
+                                [s] = [s] + [seqstep]
                             end
                         end
                     end

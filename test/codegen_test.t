@@ -205,15 +205,32 @@ local num_sum = evalfunc([[
 fn(N) :: int -> int (
     var sum = 0   // FIXME: add default initialization
     for var i in seq(N) (
-        sum = sum + i
+        sum = sum + i + 1
     )
     sum
 )]])
 --num_sum:printpretty()
+--num_sum:disas()
 local sum_acc = 0
 for i = 0, 100 do
-    assertEq(sum_acc, num_sum(i))
     sum_acc = sum_acc + i
+    assertEq(sum_acc, num_sum(i))
+end
+
+local num_sum2 = evalfunc([[
+fn(N) :: int -> int (
+    var sum = 0   // FIXME: add default initialization
+    for var i in seqi(N) (
+        sum = sum + i
+    )
+    sum
+)]])
+--num_sum2:printpretty()
+--num_sum2:disas()
+sum_acc = 0
+for i = 1, 100 do
+    sum_acc = sum_acc + i
+    assertEq(sum_acc, num_sum2(i))
 end
 --    )
 --    sum
