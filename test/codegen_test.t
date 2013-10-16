@@ -350,6 +350,16 @@ assertEq(6, breakfn(3))
 assertEq(11, breakfn(4))
 assertEq(19, breakfn(5))
 
+local ifexpr = evalfunc([[
+fn(N) :: int -> int (
+    if (N > 0) 1 else 2
+)
+]])
+assertEq(1, ifexpr(1))
+assertEq(1, ifexpr(10))
+assertEq(2, ifexpr(0))
+assertEq(2, ifexpr(-1))
+
 --assertEq(55, evalexpr([[
 --(
 --    var sum = 0

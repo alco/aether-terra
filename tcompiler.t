@@ -621,6 +621,7 @@ local function new_typechecker(env)
             end
             return {
                 id = node.id,
+                valtype = tthen.valtype,
                 codegen = function(self)
                     local elsecode
                     if telse then
@@ -639,7 +640,7 @@ local function new_typechecker(env)
                         local typ = parse_terratype(tthen.valtype)
                         return quote
                             var a: typ
-                            if [tcond:codgen()] then
+                            if [tcond:codegen()] then
                                 a = [tthen:codegen()]
                             else
                                 a = [elsecode]
