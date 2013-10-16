@@ -209,31 +209,59 @@ end
 
 --
 
+local function gen_sub(a, b)
+    --print(":::::::")
+    --Util.table_print(a)
+    --print("---------------------")
+    --Util.table_print(b)
+    return {
+        codegen = function(self)
+            return `[a:codegen()] - [b:codegen()]
+        end
+    }
+end
+
 local function resolve_fn(name, args, env)
     -- FIXME: check in env first
-    if name == "seq" then
-        return {
+    --Util.table_print(args)
+    --print("***")
+    if name == "seq" or name == "seqi" then
+        local seqstart = 0
+        local seqstep = 1
+        local seqend
+        if #args == 1 then
+            if args[1].id == ".." then
+                seqstart = args[1].args[1]
+                seqend = args[1].args[2]
+            else
+                seqend = args[1]
+            end
+        elseif #args == 2 then
+            if args[2].id ~= ".." then
+                Util.error("Expected a range after comma")
+            end
+            local second = args[2].args[1]
+            seqstart = args[1]
+            seqstep = gen_sub(second, seqstart)
+            seqend = args[2].args[2]
+        else
+            Util.error("Expected one or two arguments in seq(), got "..#args)
+        end
+
+        local result = {
             id = "stream",
             streamtype = "compile-time-sequence",
-            seqstart = 0,
-            seqstep = 1,
-            seqend = args[1],
+            seqstart = seqstart,
+            seqstep = seqstep,
+            seqend = seqend,
             valtype = {
                 elemtype = make_prim("int")
             }
         }
-    elseif name == "seqi" then
-        return {
-            id = "stream",
-            streamtype = "compile-time-sequence",
-            inclusive = true,
-            seqstart = 0,
-            seqstep = 1,
-            seqend = args[1],
-            valtype = {
-                elemtype = make_prim("int")
-            }
-        }
+        if name == "seqi" then
+            result.inclusive = true
+        end
+        return result
     end
     Util.error("Unhandled function in resolve:"..name)
 end
@@ -783,7 +811,7 @@ local function new_typechecker(env)
     for _, unop in ipairs({"neg"}) do
         checker.table[unop] = make_unaryop()
     end
-    for _, binop in ipairs({ "-", "+", "*", "/", "mod", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or", "band", "bor", "<<" }) do
+    for _, binop in ipairs({ "-", "+", "*", "/", "mod", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or", "band", "bor", "<<", ".." }) do
         checker.table[binop] = make_binop()
     end
 
@@ -868,6 +896,7 @@ function new(opts)
         ["band"] = make_binop_impl("band", {"int"}, "int", macro(function(a, b) return `a and b end)),
         ["bor"] = make_binop_impl("bor", {"int"}, "int", macro(function(a, b) return `a or b end)),
         ["<<"] = make_binop_impl("<<", {"int"}, "int", macro(function(a, b) return `a << b end)),
+        [".."] = make_binop_impl("..", {"int"}, "int", macro(function(a, b) return `nil end))
     }
 
     local compiler = Compiler.new(opts)

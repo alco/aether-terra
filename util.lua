@@ -64,6 +64,10 @@ function M.strtrim(str)
 end
 
 function M.table_print(tt, indent, done)
+  if not tt then
+      print("nil")
+      return
+  end
   done = done or {}
   indent = indent or 0
   if type(tt) == "table" then

@@ -250,6 +250,37 @@ assertEq(1, nth_fib(1))
 assertEq(1, nth_fib(2))
 assertEq(21, nth_fib(8))
 assertEq(144, nth_fib(12))
+
+local seq1 = evalfunc([[
+fn(N) :: int -> int (
+    var sum = 0
+    for var i in seq(2..N) (
+        sum = sum + i
+    )
+    sum
+)
+]])
+assertEq(0, seq1(0))
+assertEq(0, seq1(1))
+assertEq(0, seq1(2))
+assertEq(2, seq1(3))
+assertEq(5, seq1(4))
+
+local seq3 = evalfunc([[
+fn(N) :: int -> int (
+    var sum = 0
+    for var i in seq(-2,1..N) (
+        sum = sum + i
+    )
+    sum
+)
+]])
+assertEq(-2, seq3(0))
+assertEq(-2, seq3(1))
+assertEq(-1, seq3(2))
+assertEq(-1, seq3(3))
+assertEq(-1, seq3(4))
+assertEq(3, seq3(5))
 --    )
 --    sum
 --)]]))
