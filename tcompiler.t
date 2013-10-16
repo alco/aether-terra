@@ -650,19 +650,26 @@ local function new_typechecker(env)
                         local seqstep = get_or_codegen(coll.seqstep)
                         local seqend = get_or_codegen(coll.seqend)
                         local s = tvar.vars[1].sym
-                        local cmp_op
+                        local lt_op
+                        local gt_op
                         if coll.inclusive then
-                            cmp_op = macro(function(a, b)
+                            lt_op = macro(function(a, b)
                                 return `a <= b
                             end)
+                            gt_op = macro(function(a, b)
+                                return `a >= b
+                            end)
                         else
-                            cmp_op = macro(function(a, b)
+                            lt_op = macro(function(a, b)
                                 return `a < b
+                            end)
+                            gt_op = macro(function(a, b)
+                                return `a > b
                             end)
                         end
                         return quote
                             var [s]: loopvartype = [seqstart]
-                            while cmp_op([s], [seqend]) do
+                            while ([seqstep] > 0 and lt_op([s], [seqend])) or ([seqstep] < 0 and gt_op([s], [seqend])) do
                                 [ tblock:codegen() ]
                                 [s] = [s] + [seqstep]
                             end
