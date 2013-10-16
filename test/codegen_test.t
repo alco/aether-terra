@@ -296,6 +296,33 @@ assertEq(0, seqm3(1))
 assertEq(0, seqm3(2))
 assertEq(-2, seqm3(3))
 assertEq(-7, seqm3(6))
+
+local seqm1 = evalfunc([[
+fn(N) :: int -> int (
+    var sum = 0
+    for var i in seqi(200,199..N) (
+        sum = sum + i
+    )
+    sum
+)
+]])
+assertEq(0, seqm1(201))
+assertEq(200, seqm1(200))
+assertEq(399, seqm1(199))
+
+local seqi = evalfunc([[
+fn(N) :: int -> int (
+    var sum = 0
+    for var i in seqi(1..N) (
+        sum = sum + i
+    )
+    sum
+)
+]])
+assertEq(0, seqi(0))
+assertEq(1, seqi(1))
+assertEq(3, seqi(2))
+assertEq(6, seqi(3))
 --    )
 --    sum
 --)]]))
