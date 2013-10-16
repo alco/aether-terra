@@ -327,6 +327,29 @@ assertEq(6, seqi(3))
 --    sum
 --)]]))
 
+local breakfn = evalfunc([[
+fn(N) :: int -> int (
+    var a = 1, b = 2
+    var sum = 0
+    for var i in seq(0..(N+100)) (
+        if i == N (
+            break  // <------------
+        )
+        sum = sum + a
+        var t = a
+        a = b
+        b = a + t
+    )
+    sum
+)
+]])
+assertEq(0, breakfn(0))
+assertEq(1, breakfn(1))
+assertEq(3, breakfn(2))
+assertEq(6, breakfn(3))
+assertEq(11, breakfn(4))
+assertEq(19, breakfn(5))
+
 --assertEq(55, evalexpr([[
 --(
 --    var sum = 0

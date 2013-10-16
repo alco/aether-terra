@@ -116,6 +116,14 @@ function new()
     make_infix("band", 20)
     make_infix("bor", 20)
 
+    -- Keywords
+    make_node("break").snud = function(self)
+        return {
+            id = "break",
+            format = function(self) return "break" end
+        }
+    end
+
     -- Unary ops
     make_prefix("-", 30, "neg").lbp = 10
 

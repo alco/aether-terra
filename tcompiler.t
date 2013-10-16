@@ -607,6 +607,50 @@ local function new_typechecker(env)
             end
             Util.error("Incomplete implementation of 'funcall' typechecking")
         end,
+        ["if"] = function(checker, env, node)
+            local tcond = checker:typecheck(node.cond)
+            if not match_type(make_prim("bool"), tcond.valtype) then
+                Util.error("Can only use a boolean expression in condition")
+            end
+            local tthen = checker:typecheck(node.thenclause)
+            --if not node.elseclause and tthen.valtype ~= "void" then
+            --FIXME: somehow check if it is in a statement position
+            local telse
+            if node.elseclause then
+                telse = checker:typecheck(node.elseclause)
+            end
+            return {
+                id = node.id,
+                codegen = function(self)
+                    local elsecode
+                    if telse then
+                        elsecode = telse:codegen()
+                    end
+
+                    if tthen.valtype == "void" then
+                        return quote
+                            if [tcond:codegen()] then
+                                [tthen:codegen()]
+                            else
+                                [elsecode]
+                            end
+                        end
+                    else
+                        local typ = parse_terratype(tthen.valtype)
+                        return quote
+                            var a: typ
+                            if [tcond:codgen()] then
+                                a = [tthen:codegen()]
+                            else
+                                a = [elsecode]
+                            end
+                        in
+                            a
+                        end
+                    end
+                end
+            }
+        end,
         ["for"] = function(checker, env, node)
             if node.head.id ~= "in" then
                 Util.error("Expected 'for in'")
@@ -786,6 +830,15 @@ local function new_typechecker(env)
                 return `[vars]
             end
             return varnode
+        end,
+        ["break"] = function(checker, env, node)
+            return {
+                id = node.id,
+                valtype = "void",
+                codegen = function(self)
+                    return quote break end
+                end
+            }
         end,
         ["="] = function(checker, env, node)
             local variable = env[node.name.value]
