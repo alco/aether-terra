@@ -116,6 +116,9 @@ function new()
     make_infix("band", 20)
     make_infix("bor", 20)
 
+    -- Stream operators
+    make_infix("->", 7)
+
     -- Keywords
     make_node("break").snud = function(self)
         return {

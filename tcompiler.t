@@ -262,8 +262,13 @@ local function resolve_fn(name, args, env)
             result.inclusive = true
         end
         return result
+    elseif name == "take" then
+        if #args ~= 1 then
+            Util.error("Expected one argument passed to take()")
+        end
+        return { id = "take", n = args[1] }
     end
-    Util.error("Unhandled function in resolve:"..name)
+    Util.error("Unhandled function in resolve: "..name)
 end
 
 local function is_subscriptable(node)
@@ -693,30 +698,44 @@ local function new_typechecker(env)
                         -- FIXME: deal with types of literal constants in terra code
                         local seqstart = get_or_codegen(coll.seqstart)
                         local seqstep = get_or_codegen(coll.seqstep)
-                        local seqend = get_or_codegen(coll.seqend)
+                        local seqend
                         local s = tvar.vars[1].sym
                         local lt_op
                         local gt_op
-                        if coll.inclusive then
-                            lt_op = macro(function(a, b)
-                                return `a <= b
-                            end)
-                            gt_op = macro(function(a, b)
-                                return `a >= b
-                            end)
+                        if coll.seqend then
+                            seqend = get_or_codegen(coll.seqend)
+                            if coll.inclusive then
+                                lt_op = macro(function(a, b) return `a <= b end)
+                                gt_op = macro(function(a, b) return `a >= b end)
+                            else
+                                lt_op = macro(function(a, b) return `a < b end)
+                                gt_op = macro(function(a, b) return `a > b end)
+                            end
                         else
-                            lt_op = macro(function(a, b)
-                                return `a < b
-                            end)
-                            gt_op = macro(function(a, b)
-                                return `a > b
-                            end)
+                            lt_op = macro(function(a, b) return true end)
+                            gt_op = macro(function(a, b) return true end)
                         end
+
+                        local limit
+                        local limit_sym
+                        local limit_var
+                        local limit_inc
+                        if coll.limit then
+                            limit_sym = symbol(parse_terratype(coll.limit.valtype), "limit")
+                            limit_var = quote var [limit_sym] = 0 end
+                            limit = `[limit_sym] < [coll.limit:codegen()]
+                            limit_inc = quote [limit_sym] = [limit_sym] + 1 end
+                        else
+                            limit = true
+                        end
+
                         return quote
                             var [s]: loopvartype = [seqstart]
-                            while ([seqstep] > 0 and lt_op([s], [seqend])) or ([seqstep] < 0 and gt_op([s], [seqend])) do
+                            [limit_var]
+                            while [limit] and (([seqstep] > 0 and lt_op([s], [seqend])) or ([seqstep] < 0 and gt_op([s], [seqend]))) do
                                 [ tblock:codegen() ]
                                 [s] = [s] + [seqstep]
+                                [limit_inc]
                             end
                         end
                     end
@@ -727,6 +746,56 @@ local function new_typechecker(env)
                 Util.error("Expected a subscriptable collection or a stream after 'in'")
             end
             return retnode
+        end,
+        ["->"] = function(checker, env, node)
+            local tleft = checker:typecheck(node.first)
+            if tleft.id ~= "stream" then
+                Util.error("Expected a stream on the left of ->")
+            end
+            local tright = checker:typecheck(node.second)
+            if tright.id == "take" then
+                if tleft.limit then
+                    --tleft.limit = minimum of tleft.limit and
+                else
+                    tleft.limit = tright.n
+                end
+            else
+                Util.error("Unhandled function on the right of -> "..tright.id)
+            end
+            return tleft
+        end,
+        [".."] = function(checker, env, node)
+            -- FIXME: deduplicate this code from make_binop()
+            local second
+            if node.second then
+                second = node.second
+            else
+                second = node.first -- the value does not matter, just make sure it is the same type
+            end
+            local args = Util.map({node.first, second}, function(node)
+                return checker:typecheck(node, env)
+            end)
+            local types = Util.map(args, function(arg)
+                return arg.valtype
+            end)
+            local fn = checker:findfunc(env, node.id, types)
+            if not fn then
+                local typstrings = Util.map(args, function(arg)
+                    return arg.valtype:format()
+                end)
+                Util.error("No suitable overload for "..node.id.." with arg types "..Util.strjoin(typstrings, " ").." in "..node:format())
+            end
+
+            -- restore the original argument count
+            if not node.second then
+                args = {args[1]}
+            end
+            return {
+                id = fn.id,
+                args = args,
+                valtype = fn.valtype,
+                codegen = fn.codegen
+            }
         end,
         ["fn"] = function(checker, env, node)
             --print(node.typ:format())
@@ -872,7 +941,7 @@ local function new_typechecker(env)
     for _, unop in ipairs({"neg"}) do
         checker.table[unop] = make_unaryop()
     end
-    for _, binop in ipairs({ "-", "+", "*", "/", "mod", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or", "band", "bor", "<<", ".." }) do
+    for _, binop in ipairs({ "-", "+", "*", "/", "mod", "•", "==", ">", "≥", "<", "≤", "≠", "and", "or", "band", "bor", "<<" }) do
         checker.table[binop] = make_binop()
     end
 

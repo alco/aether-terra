@@ -379,44 +379,42 @@ assertEq(1, ifexpr(10))
 assertEq(2, ifexpr(0))
 assertEq(2, ifexpr(-1))
 
-assertEq(1+3+5+7+9+11+13+15+17+19, evalexpr([[
-    (
+local takefn = evalfunc([[
+    fn(N) :: int -> int (
         var sum = 0
-        for i in (seq(1,3..) -> take(10)) (
-            sum += i
+        for var i in (seq(1,3..) -> take(N)) (
+            sum = sum + i
         )
         sum
     )
-]]))
+]])
+--takefn:printpretty()
+--takefn:disas()
+assertEq(1+3+5+7+9+11+13+15+17+19, takefn(10))
 
-assertEq(45, evalexpr("seq(10) => '+"))
-assertEq(55, evalexpr("seqi(1..10) => '+"))
+local takeminusfn = evalfunc([[
+    fn(N) :: int -> int (
+        var sum = 0
+        for var i in (seq(1,-2..) -> take(N)) (
+            sum = sum + i
+        )
+        sum
+    )
+]])
+--takeminusfn:printpretty()
+--takeminusfn:disas()
+assertEq(1-2-5-8-11-14-17-20, takeminusfn(8))
 
-assertEq(1+3+5+7+9, evalexpr("seq(1,3..11) => '+"))
-assertEq(1+3+5+7+9+11, evalexpr("seqi(1,3..11) => '+"))
-assertEq(1+3+5+7+9+11+13+15+17+19, evalexpr("seq(1,3..) -> take(10) => '+"))
-
-assertEq(45, evalexpr("fold('+, seq(10))"))
-assertEq(45, evalexpr("sum(seq(10))"))
-
---assertEq(1+3+5+7+9+11+13+15+17+19, evalexpr([[
---(
---    seq(1,3..) -> take(10) => '+
---    // Constraints on the value on the right of =>:
---    // * it a tuple: a binary functoin with compatible types for both arguments and an initial value
---    // * it is a binary monoid with return type compatible with its second argument type
---    // * it is a binary function with default value for the second argument
---    // empty?(some_stream) => true: 13, false: '+
---    // some_stream .empty?(
---    //   13
---    //   => '+
---    // )
---    // some_stream => empty?(13, '+)
---    // some_stream empty?(13, => '+)
---    // (some_stream => '+) .if_empty(13)
+--assertEq(45, evalexpr("seq(10) => '+"))
+--assertEq(55, evalexpr("seqi(1..10) => '+"))
 --
---    fold('+, seq(1,3..) -> take(10))
---)]]))
+--assertEq(1+3+5+7+9, evalexpr("seq(1,3..11) => '+"))
+--assertEq(1+3+5+7+9+11, evalexpr("seqi(1,3..11) => '+"))
+--assertEq(1+3+5+7+9+11+13+15+17+19, evalexpr("seq(1,3..) -> take(10) => '+"))
+--
+--assertEq(45, evalexpr("fold('+, seq(10))"))
+--assertEq(45, evalexpr("sum(seq(10))"))
+
 
 
 
