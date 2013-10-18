@@ -129,13 +129,13 @@ assertEq(false, evalexpr("0.0/0.0 ≤ 0.0/0.0"))
 assertEq(false, evalexpr("0.0/0.0 ≠ 0.0/0.0"))
 
 local sum = evalfunc([[
-fn(bytes) :: [9]int -> int (
-    var sum = 0       // FIXME: add default initialization
-    for var byte in bytes (
-        sum = sum + byte
+    fn(bytes) :: [9]int -> int (
+        var sum = 0       // FIXME: add default initialization
+        for var byte in bytes (
+            sum = sum + byte
+        )
+        sum
     )
-    sum
-)
 ]])
 --sum:printpretty()
 --sum:disas()
@@ -147,43 +147,45 @@ assertEq(45, test_sum())
 
 
 -- More complex blocks
-assertEq(11403310, evalexpr([[(
-    var MODULO = 65521
-    var a = 1, b = 0
-    var bytes = ❮1 2 3 4 5 6 7 8 9❯
-    for var byte in bytes (
-        a = (a + byte) mod MODULO
-        b = (b + a) mod MODULO
+assertEq(11403310, evalexpr([[
+    (
+        var MODULO = 65521
+        var a = 1, b = 0
+        var bytes = ❮1 2 3 4 5 6 7 8 9❯
+        for var byte in bytes (
+            a = (a + byte) mod MODULO
+            b = (b + a) mod MODULO
+        )
+        (b << 16) bor a
     )
-    (b << 16) bor a
-)]], false))
+]], false))
 
 local somefn = evalfunc([[
-fn(a b c) :: (int int int) -> int (
-    a
-)
+    fn(a b c) :: (int int int) -> int (
+        a
+    )
 ]])
 assertEq(1, somefn(1,3,3))
 assertEq(2, somefn(2,1,1))
 assertEq(3, somefn(3,2,2))
 
 local sum3 = evalfunc([[
-fn(a b c) :: (int int int) -> int (
-    a + b + c
-)
+    fn(a b c) :: (int int int) -> int (
+        a + b + c
+    )
 ]])
 assertEq(6, sum3(1,2,3))
 
 local adler32 = evalfunc([[
-fn(bytes) :: [9]int -> int (
-    var MODULO = 65521
-    var a = 1, b = 0
-    for var byte in bytes (
-        a = (a + byte) mod MODULO
-        b = (b + a) mod MODULO
+    fn(bytes) :: [9]int -> int (
+        var MODULO = 65521
+        var a = 1, b = 0
+        for var byte in bytes (
+            a = (a + byte) mod MODULO
+            b = (b + a) mod MODULO
+        )
+        (b << 16) bor a
     )
-    (b << 16) bor a
-)
 ]])
 --adler32:printpretty()
 --adler32:disas()
@@ -193,22 +195,25 @@ local terra test_adler32()
 end
 assertEq(11403310, test_adler32())
 
-assertEq(45, evalexpr([[(
-    var sum = 0
-    for var i in seq(10) (
-        sum = sum + i
+assertEq(45, evalexpr([[
+    (
+        var sum = 0
+        for var i in seq(10) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)]]))
+]]))
 
 local num_sum = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0   // FIXME: add default initialization
-    for var i in seq(N) (
-        sum = sum + i + 1
+    fn(N) :: int -> int (
+        var sum = 0   // FIXME: add default initialization
+        for var i in seq(N) (
+            sum = sum + i + 1
+        )
+        sum
     )
-    sum
-)]])
+]])
 --num_sum:printpretty()
 --num_sum:disas()
 local sum_acc = 0
@@ -218,13 +223,14 @@ for i = 0, 100 do
 end
 
 local num_sum2 = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0   // FIXME: add default initialization
-    for var i in seqi(N) (
-        sum = sum + i
+    fn(N) :: int -> int (
+        var sum = 0   // FIXME: add default initialization
+        for var i in seqi(N) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)]])
+]])
 --num_sum2:printpretty()
 --num_sum2:disas()
 sum_acc = 0
@@ -234,16 +240,16 @@ for i = 1, 100 do
 end
 
 local nth_fib = evalfunc([[
-fn(N) :: int -> int (
-    var a = 0, b = 1
-    for var i in seq(N) (
-        // FIXME: ugly code
-        var t = b
-        b = a + b
-        a = t
+    fn(N) :: int -> int (
+        var a = 0, b = 1
+        for var i in seq(N) (
+            // FIXME: ugly code
+            var t = b
+            b = a + b
+            a = t
+        )
+        a
     )
-    a
-)
 ]])
 assertEq(0, nth_fib(0))
 assertEq(1, nth_fib(1))
@@ -252,13 +258,13 @@ assertEq(21, nth_fib(8))
 assertEq(144, nth_fib(12))
 
 local seq1 = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0
-    for var i in seq(2..N) (
-        sum = sum + i
+    fn(N) :: int -> int (
+        var sum = 0
+        for var i in seq(2..N) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)
 ]])
 assertEq(0, seq1(0))
 assertEq(0, seq1(1))
@@ -267,13 +273,13 @@ assertEq(2, seq1(3))
 assertEq(5, seq1(4))
 
 local seq3 = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0
-    for var i in seq(-2,1..N) (
-        sum = sum + i
+    fn(N) :: int -> int (
+        var sum = 0
+        for var i in seq(-2,1..N) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)
 ]])
 assertEq(-2, seq3(0))
 assertEq(-2, seq3(1))
@@ -283,13 +289,13 @@ assertEq(-1, seq3(4))
 assertEq(3, seq3(5))
 
 local seqm3 = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0
-    for var i in seq(-2,-5..-N) (
-        sum = sum + i
+    fn(N) :: int -> int (
+        var sum = 0
+        for var i in seq(-2,-5..-N) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)
 ]])
 assertEq(0, seqm3(0))
 assertEq(0, seqm3(1))
@@ -298,50 +304,63 @@ assertEq(-2, seqm3(3))
 assertEq(-7, seqm3(6))
 
 local seqm1 = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0
-    for var i in seqi(200,199..N) (
-        sum = sum + i
+    fn(N) :: int -> int (
+        var sum = 0
+        for var i in seqi(200,199..N) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)
 ]])
 assertEq(0, seqm1(201))
 assertEq(200, seqm1(200))
 assertEq(399, seqm1(199))
 
 local seqi = evalfunc([[
-fn(N) :: int -> int (
-    var sum = 0
-    for var i in seqi(1..N) (
-        sum = sum + i
+    fn(N) :: int -> int (
+        var sum = 0
+        for var i in seqi(1..N) (
+            sum = sum + i
+        )
+        sum
     )
-    sum
-)
 ]])
 assertEq(0, seqi(0))
 assertEq(1, seqi(1))
 assertEq(3, seqi(2))
 assertEq(6, seqi(3))
+
+--local modfilter = evalfunc([[
+--fn(N) :: int -> int (
+--    var sum = 0
+--    for var i in seq(3..N) (
+--        sum = sum + i
+--    )
+--    for var i in seq(5..N) (
+--        if i mod 3 == 0 (
+--            continue        // <--------
+--        )
+--        sum = sum + i
 --    )
 --    sum
---)]]))
+--)
+--]])
 
 local breakfn = evalfunc([[
-fn(N) :: int -> int (
-    var a = 1, b = 2
-    var sum = 0
-    for var i in seq(0..(N+100)) (
-        if i == N (
-            break  // <------------
+    fn(N) :: int -> int (
+        var a = 1, b = 2
+        var sum = 0
+        for var i in seq(0..(N+100)) (
+            if i == N (
+                break  // <------------
+            )
+            sum = sum + a
+            var t = a
+            a = b
+            b = a + t
         )
-        sum = sum + a
-        var t = a
-        a = b
-        b = a + t
+        sum
     )
-    sum
-)
 ]])
 assertEq(0, breakfn(0))
 assertEq(1, breakfn(1))
@@ -351,9 +370,9 @@ assertEq(11, breakfn(4))
 assertEq(19, breakfn(5))
 
 local ifexpr = evalfunc([[
-fn(N) :: int -> int (
-    if (N > 0) 1 else 2
-)
+    fn(N) :: int -> int (
+        if (N > 0) 1 else 2
+    )
 ]])
 assertEq(1, ifexpr(1))
 assertEq(1, ifexpr(10))
