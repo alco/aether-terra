@@ -1,0 +1,25 @@
+-- Oct 18, 2013 --
+
+* constant folding at code generation stage (to simplify steps in loops)
+
+* implement the sink operator =>
+assertEq(1+3+5+7+9+11+13+15+17+19, evalexpr([[
+(
+    seq(1,3..) -> take(10) => '+
+    // Constraints on the value on the right of =>:
+    // * it a tuple: a binary functoin with compatible types for both arguments and an initial value
+    // * it is a binary monoid with return type compatible with its second argument type
+    // * it is a binary function with default value for the second argument
+    // * a collection constructor/literal
+    // empty?(some_stream) => true: 13, false: '+
+    // some_stream .empty?(
+    //   13
+    //   => '+
+    // )
+    // some_stream => empty?(13, '+)
+    // some_stream empty?(13, => '+)
+    // (some_stream => '+) .if_empty(13)
+
+    fold('+, seq(1,3..) -> take(10))
+)]]))
+
